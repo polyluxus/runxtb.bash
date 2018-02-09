@@ -52,33 +52,33 @@ helpme ()
 get_bindir ()
 {
 #  Taken from https://stackoverflow.com/a/246128/3180795
-  local resolve_file="$1" directory_name="$2" link_target DIR RDIR
+  local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
   message "Getting directory for '$resolve_file'."
   #  resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
-    TARGET="$(readlink "$resolve_file")"
+    link_target="$(readlink "$resolve_file")"
     if [[ $link_target == /* ]]; then
       message "File '$resolve_file' is an absolute symlink to '$link_target'"
       resolve_file="$link_target"
     else
-      DIR="$( dirname "$resolve_file" )" 
-      message "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$DIR')"
+      directory_name="$( dirname "$resolve_file" )" 
+      message "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
       #  If $SOURCE was a relative symlink, we need to resolve 
       #+ it relative to the path where the symlink file was located
-      resolve_file="$DIR/$link_target"
+      resolve_file="$directory_name/$link_target"
     fi
   done
   message "File is '$resolve_file'" 
-  RDIR="$( dirname "$resolve_file")"
-  DIR="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
-  if [ "$DIR" != "$RDIR" ]; then
-    message "$directory_name '$DIR' resolves to '$DIR'"
+  resolve_dir_name="$( dirname "$resolve_file")"
+  directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
+  if [ "$directory_name" != "$resolve_dir_name" ]; then
+    message "$description '$directory_name' resolves to '$directory_name'"
   fi
-  message "$directory_name is '$DIR'"
-  if [[ -z $DIR ]] ; then
+  message "$description is '$directory_name'"
+  if [[ -z $directory_name ]] ; then
     echo "."
   else
-    echo "$DIR"
+    echo "$directory_name"
   fi
 }
 
