@@ -1,0 +1,4 @@
+#!/bin/bash
+# Dummy file, does nothing but echo the command
+echo "Dummy xtb."
+echo $*
