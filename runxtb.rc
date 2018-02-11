@@ -5,12 +5,17 @@ MKL_NUM_THREADS=4
 #Set default memory
 OMP_STACKSIZE=1000m
 # Set directory
-XTBHOME=/path/to/xtb
+#XTBHOME=/path/to/xtb
 # Set the name of the executable
-xtb_callname="xtb"
+#xtb_callname="xtb"
 # The above two lines should combined give the full path to the program
 #  XTBHOME/xtb_callname
 # Set chattyness (0: all; 1: no info; 2: no warnings; >2: nothing)
 stay_quiet=0
 # Trap output of xtb in
-output_file="runxtb.out"
+#output_file="runxtb.out"
+# Set default mode
+run_interactive="yes"
+# Set Walltime
+#requested_walltime="24:00:00"
+

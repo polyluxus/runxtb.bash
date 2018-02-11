@@ -99,6 +99,62 @@ validate_integer ()
     fi
 }
 
+format_walltime_or_exit ()
+{
+    local check_duration="$1"
+    # Split time in HH:MM:SS
+    # Strips away anything up to and including the rightmost colon
+    # strips nothing if no colon present
+    # and tests if the value is numeric
+    # this is assigned to seconds
+    local trunc_duration_seconds=${check_duration##*:}
+    validate_integer "$trunc_duration_seconds" "seconds"
+    # If successful value is stored for later assembly
+    #
+    # Check if the value is given in seconds
+    # "${check_duration%:*}" strips shortest match ":*" from back
+    # If no colon is present, the strings are identical
+    if [[ ! "$check_duration" == "${check_duration%:*}" ]]; then
+        # Strip seconds and colon
+        check_duration="${check_duration%:*}"
+        # Strips away anything up to and including the rightmost colon
+        # this is assigned as minutes
+        # and tests if the value is numeric
+        local trunc_duration_minutes=${check_duration##*:}
+        validate_integer "$trunc_duration_minutes" "minutes"
+        # If successful value is stored for later assembly
+        #
+        # Check if value was given as MM:SS same procedure as above
+        if [[ ! "$check_duration" == "${check_duration%:*}" ]]; then
+            #Strip minutes and colon
+            check_duration="${check_duration%:*}"
+            # # Strips away anything up to and including the rightmost colon
+            # this is assigned as hours
+            # and tests if the value is numeric
+            local trunc_duration_hours=${check_duration##*:}
+            validate_integer "$trunc_duration_hours" "hours"
+            # Check if value was given as HH:MM:SS if not, then exit
+            if [[ ! "$check_duration" == "${check_duration%:*}" ]]; then
+                fatal "Unrecognised duration format."
+            fi
+        fi
+    fi
+
+    # Modify the duration to have the format HH:MM:SS
+    # disregarding the format of the user input
+    # keep only 0-59 seconds stored, let rest overflow to minutes
+    local final_duration_seconds=$((trunc_duration_seconds % 60))
+    # Add any multiple of 60 seconds to the minutes given as input
+    trunc_duration_minutes=$((trunc_duration_minutes + trunc_duration_seconds / 60))
+    # save as minutes what cannot overflow as hours
+    local final_duration_minutes=$((trunc_duration_minutes % 60))
+    # add any multiple of 60 minutes to the hours given as input
+    local final_duration_hours=$((trunc_duration_hours + trunc_duration_minutes / 60))
+
+    # Format string and save on variable
+    printf "%d:%02d:%02d" $final_duration_hours $final_duration_minutes $final_duration_seconds
+}
+
 # 
 # Test and add to PATH
 #
@@ -151,6 +207,53 @@ backup_if_exists ()
 }
 
 #
+# Write submission script
+#
+
+write_submit_script ()
+{
+    message "Remote mode selected, creating PBS job script instead."
+    if [[ ! -e ${output_file%.*}.sh ]] ; then
+      submitscript="${output_file%.*}.sh"
+    else
+      fatal "Designated submitscript ${output_file%.*}.sh already exists."
+    fi
+
+    cat > "$submitscript" <<-EOF
+#!/bin/sh
+#PBS -l nodes=1:ppn=$OMP_NUM_THREADS
+#PBS -l mem=$OMP_STACKSIZE
+#PBS -l walltime=$requested_walltime
+#PBS -N ${submitscript%.*}
+#PBS -m ae
+#PBS -o $submitscript.o\${PBS_JOBID%%.*}
+#PBS -e $submitscript.e\${PBS_JOBID%%.*}
+
+echo "This is $nodename"
+echo "OS $operatingsystem ($architecture)"
+echo "Running on $OMP_NUM_THREADS $processortype."
+echo "Calculation with xtb from $PWD."
+echo "Working directry is \$PBS_O_WORKDIR"
+cd "\$PBS_O_WORKDIR"
+
+export PATH="\$PATH:$XTBHOME"
+export XTBHOME="$XTBHOME" 
+export OMP_NUM_THREADS="$OMP_NUM_THREADS"
+export MKL_NUM_THREADS="$MKL_NUM_THREADS"
+export OMP_STACKSIZE="$OMP_STACKSIZE"  
+
+date
+$xtb_callname ${xtb_commands[@]} > "$output_file"
+date
+
+EOF
+
+message "Created submit PBS script, to start the job:"
+message "  qsub $submitscript"
+
+exit 0
+}
+#
 # Start main script
 #
 
@@ -158,13 +261,25 @@ backup_if_exists ()
 # Sent logging information to stdout
 exec 3>&1
 
-# Defaults
+#
+# Get some informations of the platform
+#
+nodename=$(uname -n)
+operatingsystem=$(uname -o)
+architecture=$(uname -p)
+processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
+
+#
+# Set some Defaults
+#
 OMP_NUM_THREADS=4
 MKL_NUM_THREADS=4
 OMP_STACKSIZE=1000m
 xtb_callname="xtb"
+requested_walltime="24:00:00"
+run_interactive="yes"
 
-stay_quiet=1        # Suppress logging messages for finding the script   
+stay_quiet=1        # Suppress logging messages for finding the script path
 [[ "$1" == "debug" ]] && stay_quiet=0 && shift # Secret debugging switch
 
 scriptpath="$(get_bindir "$0" "Directory of runxtb")"
@@ -179,7 +294,7 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:o:B:qh options ; do
+while getopts :p:m:w:o:siB:qh options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   -p <ARG> Set number of professors
@@ -191,8 +306,17 @@ while getopts :p:m:o:B:qh options ; do
     m) validate_integer "$OPTARG"
        OMP_STACKSIZE="${OPTARG}m"
        ;;
+    #hlp   -w <ARG> Set the walltime when sent to the queue
+    w) requested_walltime=$(format_walltime_or_exit "$OPTARG")
+       ;;
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
     o) output_file="$OPTARG"
+       ;;
+    #hlp   -s       Write PBS submitscript (instead of interactive execution)
+    s) run_interactive="no"
+       ;;
+    #hlp   -i       Execute in interactive mode (overwrite rc settings)
+    s) run_interactive="yes"
        ;;
     #hlp   -B <ARG> Set absolute path to xtb to <ARG>.
     B) XTBHOME="$(get_bindir "$OPTARG" "XTBHOME")"
@@ -210,10 +334,24 @@ while getopts :p:m:o:B:qh options ; do
 
     :) fatal "Option -$OPTARG requires an argument." ;;
 
+    #hlp Current settings:
+    #hlp   XTBHOME="$XTBHOME" 
+    #hlp   xtb_callname="$xtb_callname"
+    #hlp   OMP_NUM_THREADS="$OMP_NUM_THREADS"
+    #hlp   MKL_NUM_THREADS="$MKL_NUM_THREADS"
+    #hlp   OMP_STACKSIZE="$OMP_STACKSIZE"
+    #hlp   requested_walltime="$requested_walltime"
+    #hlp   outputfile="$output_file"
+    #hlp   run_interactive="$run_interactive"
   esac
 done
 
 shift $(( OPTIND - 1 ))
+
+# Assume jobname from name of coordinate file, cut xyz (if exists)
+jobname="${1%.xyz}"
+# Store everything that should be passed to xtb
+xtb_commands=("$@")
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
 warning "This is not the original xtb program!"
@@ -228,14 +366,22 @@ export XTBHOME OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 
 print_info
 
-if [[ -z $output_file ]] ; then 
-  $xtb_callname "$@" 
-  exit $? # Carry over exit status
-else
+if [[ $run_interactive == "no" ]] ; then
+  [[ -z $output_file ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
-  $xtb_callname "$@" > "$output_file"
+  write_submit_script
+elif [[ $run_interactive == "yes" ]] ; then
+  if [[ -z $output_file ]] ; then 
+    $xtb_callname "${xtb_commands[@]}" 
+    exit $? # Carry over exit status
+  else
+    backup_if_exists "$output_file"
+    $xtb_callname "${xtb_commands[@]}" > "$output_file"
+  fi
+else
+  fatal "Unrecognised mode; abort."
 fi
 
 
 exec 3>&-
-#hlp ===== End of Script ===== (Martin, 2018/02/09)
+#hlp ===== End of Script ===== (Martin, 2018/02/11)
