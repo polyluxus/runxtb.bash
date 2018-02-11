@@ -334,6 +334,15 @@ while getopts :p:m:w:o:siB:qh options ; do
 
     :) fatal "Option -$OPTARG requires an argument." ;;
 
+    #hlp Current settings:
+    #hlp   XTBHOME="$XTBHOME" 
+    #hlp   xtb_callname="$xtb_callname"
+    #hlp   OMP_NUM_THREADS="$OMP_NUM_THREADS"
+    #hlp   MKL_NUM_THREADS="$MKL_NUM_THREADS"
+    #hlp   OMP_STACKSIZE="$OMP_STACKSIZE"
+    #hlp   requested_walltime="$requested_walltime"
+    #hlp   outputfile="$output_file"
+    #hlp   run_interactive="$run_interactive"
   esac
 done
 

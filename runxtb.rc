@@ -14,3 +14,8 @@ OMP_STACKSIZE=1000m
 stay_quiet=0
 # Trap output of xtb in
 #output_file="runxtb.out"
+# Set default mode
+run_interactive="yes"
+# Set Walltime
+#requested_walltime="24:00:00"
+
