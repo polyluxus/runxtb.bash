@@ -243,7 +243,7 @@ export MKL_NUM_THREADS="$MKL_NUM_THREADS"
 export OMP_STACKSIZE="$OMP_STACKSIZE"  
 
 date
-$xtb_callname "${xtb_commands[@]}" > "$output_file"
+$xtb_callname ${xtb_commands[@]} > "$output_file"
 date
 
 EOF
