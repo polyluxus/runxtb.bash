@@ -1,5 +1,4 @@
 #!/bin/bash
 # Dummy file, does nothing but echo the command
-echo "This is a testing utility; a dummy xtb."
-echo "To be executed by the script:"
-echo "xtb" $*
+echo "Dummy xtb."
+echo $*

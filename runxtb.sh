@@ -42,9 +42,9 @@ fatal ()
 helpme ()
 {
     local line
-    local pattern="^[[:space:]]*#hlp[[:space:]]?(.*)?$"
+    local pattern="^[[:space:]]*#hlp[[:space:]](.*$)"
     while read -r line; do
-      [[ "$line" =~ $pattern ]] && eval "echo \"${BASH_REMATCH[1]}\""
+      [[ $line =~ $pattern ]] && eval "echo \"${BASH_REMATCH[1]}\""
     done < <(grep "#hlp" "$0")
     exit 0
 }
@@ -197,8 +197,12 @@ backup_if_exists ()
           ((filecount++))
       done
       warning "File '$1' exists, will make backup."
-      local move_message="$(mv -v "$1" "$1.$filecount")"
-      message "$move_message"
+      indent "  "
+      if (( stay_quiet <= 0 )) ; then  
+        mv -v "$1" "$1.$filecount"
+      else
+        mv "$1" "$1.$filecount"
+      fi
     fi
 }
 
@@ -209,18 +213,21 @@ backup_if_exists ()
 write_submit_script ()
 {
     message "Remote mode selected, creating PBS job script instead."
-    local submitscript_filename="${1%.*}.sh"
-    backup_if_exists "$submitscript_filename"
+    if [[ ! -e ${output_file%.*}.sh ]] ; then
+      submitscript="${output_file%.*}.sh"
+    else
+      fatal "Designated submitscript ${output_file%.*}.sh already exists."
+    fi
 
-    cat > "$submitscript_filename" <<-EOF
+    cat > "$submitscript" <<-EOF
 #!/bin/sh
 #PBS -l nodes=1:ppn=$OMP_NUM_THREADS
 #PBS -l mem=$OMP_STACKSIZE
 #PBS -l walltime=$requested_walltime
-#PBS -N ${submitscript_filename%.*}
+#PBS -N ${submitscript%.*}
 #PBS -m ae
-#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
-#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
+#PBS -o $submitscript.o\${PBS_JOBID%%.*}
+#PBS -e $submitscript.e\${PBS_JOBID%%.*}
 
 echo "This is $nodename"
 echo "OS $operatingsystem ($architecture)"
@@ -241,7 +248,10 @@ date
 
 EOF
 
-echo "$submitscript_filename"
+message "Created submit PBS script, to start the job:"
+message "  qsub $submitscript"
+
+exit 0
 }
 #
 # Start main script
@@ -284,12 +294,9 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSiB:qh options ; do
+while getopts :p:m:w:o:siB:qh options ; do
   case $options in
     #hlp OPTIONS:
-    #hlp   Any switches used will overwrite rc settings,
-    #hlp   for the same options, only the last one will have an eefect.
-    #hlp 
     #hlp   -p <ARG> Set number of professors
     p) validate_integer "$OPTARG"
        OMP_NUM_THREADS="$OPTARG"
@@ -308,11 +315,8 @@ while getopts :p:m:w:o:sSiB:qh options ; do
     #hlp   -s       Write PBS submitscript (instead of interactive execution)
     s) run_interactive="no"
        ;;
-    #hlp   -S       Write PBS submitscript and submit it to the queue.
-    S) run_interactive="sub"
-       ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
-    i) run_interactive="yes"
+    s) run_interactive="yes"
        ;;
     #hlp   -B <ARG> Set absolute path to xtb to <ARG>.
     B) XTBHOME="$(get_bindir "$OPTARG" "XTBHOME")"
@@ -351,7 +355,7 @@ xtb_commands=("$@")
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
 warning "This is not the original xtb program!"
-warning "This is only a wrapper to set paths and variables."
+warning "this is only a wrapper to set paths and variables."
 
 # If not set explicitly, assume xtb is in same directory as script
 [[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
@@ -362,16 +366,10 @@ export XTBHOME OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 
 print_info
 
-if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
+if [[ $run_interactive == "no" ]] ; then
   [[ -z $output_file ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
-  submitscript=$(write_submit_script "$output_file")
-  if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
-    qsub "$submitscript"
-  else
-    message "Created submit PBS script, to start the job:"
-    message "  qsub $submitscript"
-  fi
+  write_submit_script
 elif [[ $run_interactive == "yes" ]] ; then
   if [[ -z $output_file ]] ; then 
     $xtb_callname "${xtb_commands[@]}" 
@@ -384,6 +382,6 @@ else
   fatal "Unrecognised mode; abort."
 fi
 
+
 exec 3>&-
-message "Wrapper script completed."
-#hlp ===== End of Script ===== (Martin, 2018/02/13)
+#hlp ===== End of Script ===== (Martin, 2018/02/11)
