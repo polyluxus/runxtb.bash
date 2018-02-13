@@ -33,10 +33,9 @@
 ## Set default mode 
 ## (yes: interactive; no: write script; sub: write and submit)
 #
-   run_interactive="yes"
+run_interactive="yes"
 
 ## Set Walltime for non-interactive mode
 #
 #  requested_walltime="24:00:00"
-
 

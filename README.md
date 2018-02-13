@@ -34,6 +34,9 @@ The following script options are available:
  * `-m <ARG>` Secify the memory to be used (in megabyte?).
    This will set `OMP_STACKSIZE=<ARG>m`.
  * `-o <ARG>` Trap the output (not the errors) of `xtb` into a file called `<ARG>`.
+ * `-s`       Write PBS submitscript (instead of interactive execution)
+ * `-S`       Write PBS submitscript and directly submit it to the queue.
+ * `-i`       Execute in interactive mode (overwrite rc settings)
  * `-B <ARG>` Set the absolute path to the executable `xtb` to `<ARG>`.
    The name of the program needs to be included.
  * `-q`       Suppress any logging messages of the script.
@@ -53,4 +56,4 @@ The following files come with this script:
  * `xtb` A symbolic link to the above dummy file, so that the script may find it.
  * `README.md` This file.
 
-(Martin, 2018/02/09)
+(Martin, 2018/02/13)
