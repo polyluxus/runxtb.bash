@@ -382,6 +382,6 @@ else
   fatal "Unrecognised mode; abort."
 fi
 
-
+message "Wrapper script completed."
 exec 3>&-
-#hlp ===== End of Script ===== (Martin, 2018/02/11)
+#hlp ===== End of Script ===== (Martin, 2018/02/13)
