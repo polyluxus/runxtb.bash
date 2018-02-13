@@ -26,22 +26,31 @@ Simply call the the script as if you would call the original program:
 ```
 runxtb.sh [script options] <coord_file> [xtb options]
 ```
+Any switches used will overwrite rc settings, 
+which take precedence over the built-in defaults.
+For the same options/ modes, only the last one will have an effect.
 
 The following script options are available:
 
  * `-p <ARG>` Specify the number of processors to be used.  
-   This will set `OMP_NUM_THREADS=<ARG>` and `MKL_NUM_THREADS=<ARG>`.
- * `-m <ARG>` Secify the memory to be used (in megabyte?).
-   This will set `OMP_STACKSIZE=<ARG>m`.
+              This will set `OMP_NUM_THREADS=<ARG>` and `MKL_NUM_THREADS=<ARG>`.
+              (Default defined within script is `4`.)
+ * `-m <ARG>` Secify the memory to be used (in megabyte).
+              This will set `OMP_STACKSIZE=<ARG>m`. (Default in script is `1000m`.)
  * `-o <ARG>` Trap the output (not the errors) of `xtb` into a file called `<ARG>`.
- * `-s`       Write PBS submitscript (instead of interactive execution)
+              No output will be created in interactive mode by default.
+              In non-interactive mode it will be derived from the first argument given
+              after the options, which should be `coord_file`.
+ * `-s`       Write PBS submitscript instead of interactive execution.
+              This needs to be sumbitted separately, useful if review might be necessary.
  * `-S`       Write PBS submitscript and directly submit it to the queue.
- * `-i`       Execute in interactive mode (overwrite rc settings)
+ * `-i`       Execute in interactive mode. 
+              This option is useful to overwrite rc settings.
  * `-B <ARG>` Set the absolute path to the executable `xtb` to `<ARG>`.
-   The name of the program needs to be included.
+              The name of the program needs to be included.
  * `-q`       Suppress any logging messages of the script.
-   If specified twice, it will also suppress warnings,
-   if specified more than twice, it will suppress also errors.
+              If specified twice, it will also suppress warnings,
+              if specified more than twice, it will suppress also errors.
  * `-h`       Prints a small help text.
 
 ## Included files
