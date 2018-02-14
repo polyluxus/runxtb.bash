@@ -209,8 +209,8 @@ get_rc ()
   while [[ ! -z $1 ]] ; do
     test_runxtbrc_dir="$1"
     shift
-    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc" && continue)"
-    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc" && continue)"
+    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" && continue
+    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")"
   done
   echo "$test_runxtbrc_loc"
 }
