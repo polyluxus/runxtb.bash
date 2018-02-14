@@ -18,25 +18,37 @@
 
 message ()
 {
-    (( stay_quiet <= 0 )) && echo "INFO   : " "$*" >&3
-}
-
-indent ()
-{
-    (( stay_quiet <= 0 )) && echo -n "INFO   : " "$*" >&3
+    if (( stay_quiet <= 0 )) ; then
+      echo "INFO   : " "$*" >&3
+    else
+      debug "(info   ) " "$*"
+    fi
 }
 
 warning ()
 {
-    (( stay_quiet <= 1 )) && echo "WARNING: " "$*" >&2
+    if (( stay_quiet <= 1 )) ; then
+      echo "WARNING: " "$*" >&2
+    else
+      debug "(warning) " "$*"
+    fi
     return 1
 }
 
 fatal ()
 {
-    (( stay_quiet <= 2 )) && echo "ERROR  : " "$*" >&2
+    if (( stay_quiet <= 2 )) ; then 
+      echo "ERROR  : " "$*" >&2
+    else
+      debug "(error  ) " "$*"
+    fi
     exit 1
 }
+
+debug ()
+{
+    echo "DEBUG  : " "$*" >&4
+}    
 
 #
 # Print some helping commands
@@ -57,28 +69,28 @@ get_bindir ()
 {
 #  Taken from https://stackoverflow.com/a/246128/3180795
   local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
-  message "Getting directory for '$resolve_file'."
+  debug "Getting directory for '$resolve_file'."
   #  resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
     link_target="$(readlink "$resolve_file")"
     if [[ $link_target == /* ]]; then
-      message "File '$resolve_file' is an absolute symlink to '$link_target'"
+      debug "File '$resolve_file' is an absolute symlink to '$link_target'"
       resolve_file="$link_target"
     else
       directory_name="$( dirname "$resolve_file" )" 
-      message "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
+      debug "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
       #  If $SOURCE was a relative symlink, we need to resolve 
       #+ it relative to the path where the symlink file was located
       resolve_file="$directory_name/$link_target"
     fi
   done
-  message "File is '$resolve_file'" 
+  debug "File is '$resolve_file'" 
   resolve_dir_name="$( dirname "$resolve_file")"
   directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
   if [ "$directory_name" != "$resolve_dir_name" ]; then
-    message "$description '$directory_name' resolves to '$directory_name'"
+    debug "$description '$directory_name' resolves to '$directory_name'"
   fi
-  message "$description is '$directory_name'"
+  debug "$description is '$directory_name'"
   if [[ -z $directory_name ]] ; then
     echo "."
   else
@@ -196,23 +208,33 @@ print_info ()
 test_rc_file ()
 {
   local test_runxtbrc="$1"
+  debug "Testing '$test_runxtbrc' ..."
   if [[ -f "$test_runxtbrc" && -r "$test_runxtbrc" ]] ; then
     echo "$test_runxtbrc"
+    return 0
   else
+    debug "... missing."
     return 1
   fi
 }
 
 get_rc ()
 {
-  local test_runxtbrc_dir test_runxtbrc_loc
+  local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
   while [[ ! -z $1 ]] ; do
     test_runxtbrc_dir="$1"
     shift
-    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" && continue
-    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")"
+    if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
+      return_runxtbrc_loc="$test_runxtbrc_loc" 
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
+    elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
+      return_runxtbrc_loc="$test_runxtbrc_loc"
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+    fi
   done
-  echo "$test_runxtbrc_loc"
+  debug "(returned) return_runxtbrc_loc=$return_runxtbrc_loc"
+  echo "$return_runxtbrc_loc"
 }
 
 #
@@ -224,7 +246,7 @@ backup_if_exists ()
     if [[ -e "$1" ]]; then
       local filecount=1
       while [[ -e "$1.$filecount" ]]; do
-          ((filecount++))
+        ((filecount++))
       done
       warning "File '$1' exists, will make backup."
       local move_message="$(mv -v "$1" "$1.$filecount")"
@@ -302,15 +324,22 @@ requested_walltime="24:00:00"
 run_interactive="yes"
 exit_status=0
 
-stay_quiet=1        # Suppress logging messages for finding the script path
-[[ "$1" == "debug" ]] && stay_quiet=0 && shift # Secret debugging switch
+stay_quiet=0
+
+if [[ "$1" == "debug" ]] ; then
+  # Secret debugging switch
+  exec 4>&1
+  stay_quiet=0 
+  shift 
+else
+  exec 4> /dev/null
+fi
 
 scriptpath="$(get_bindir "$0" "Directory of runxtb")"
 runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "$PWD")"
+debug "runxtbrc_loc=$runxtbrc_loc"
 
-stay_quiet=0        # Reset to default logging
-
-if [[ ! -z "$runxtbrc_loc" ]] ; then
+if [[ ! -z $runxtbrc_loc ]] ; then
   . "$runxtbrc_loc"
   message "Configuration file '$runxtbrc_loc' applied."
 fi
@@ -379,8 +408,10 @@ shift $(( OPTIND - 1 ))
 
 # Assume jobname from name of coordinate file, cut xyz (if exists)
 jobname="${1%.xyz}"
+debug "Guessed jobname is '$jobname'."
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
+debug "Commands for xtb are '${xtb_commands[*]}'."
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
 warning "This is not the original xtb program!"
@@ -392,6 +423,10 @@ warning "This is only a wrapper to set paths and variables."
 check_program_or_exit "$XTBHOME/$xtb_callname"
 add_to_PATH "$XTBHOME"
 export XTBHOME OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
+debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
+debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
+debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
+debug "          outputfile=$output_file run_interactive=$run_interactive"
 
 print_info
 
@@ -400,7 +435,8 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   backup_if_exists "$output_file"
   submitscript=$(write_submit_script "$output_file")
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
-    submit_id="$(qsub "$submitscript" || exit_status="$?")"
+    debug "Created '$submitscript'."
+    submit_id="$(qsub "$submitscript")" || exit_status="$?"
     if (( exit_status > 0 )) ; then
       warning "Submission went wrong."
     else
@@ -425,5 +461,5 @@ fi
 
 message "Wrapper script completed."
 exec 3>&-
-#hlp ===== End of Script ===== (Martin, 2018/02/13)
+#hlp ===== End of Script ===== (Martin, 2018/02/14)
 exit $exit_status
