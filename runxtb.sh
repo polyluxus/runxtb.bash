@@ -1,11 +1,15 @@
 #!/bin/bash
 
 #hlp ===== Not Part of xTB =====
-#hlp This is a little helper script to use xTB from
-#hlp https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb
-#hlp without making changes to any local setting files like
-#hlp '.bashrc', '.profile', etc.
+#hlp DESCRIPTION:
+#hlp   This is a little helper script to use xTB from
+#hlp   https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb
+#hlp   without making changes to any local setting files like
+#hlp   '.bashrc', '.profile', etc.
 #hlp  
+#hlp USAGE:
+#hlp   runxtb.sh [script options] <coord_file> [xtb options]
+#hlp 
 
 #
 # Print logging information and warnings nicely.
