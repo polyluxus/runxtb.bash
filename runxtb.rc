@@ -13,12 +13,12 @@
 #
 #  XTBHOME=/path/to/xtb
 #
-## Set the name of the executable
+## Set the name of the executable 
+## (This should be xtb. Here set to xtb.dummy for testing.)
 #
-#  xtb_callname="xtb"
+   xtb_callname="xtb.dummy"
 #
-## The above two lines should combined give the full path to the program
-##
+## The above two lines combined should give the full path to the program, i.e.
 ## XTBHOME/xtb_callname
 
 ## Set chattyness 
