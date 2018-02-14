@@ -88,5 +88,14 @@ In all other cases it will be `0` if everything went according to plan,
 or `1` if there was a problem.  
 The dummy script `xtb.dummy` always exits with `2`.
 
+## Debug
+
+Things go wrong.  
+We need to accept that. 
+To find out more, using `debug` as the very first argument gives more information.
+For example:
+```
+runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
+```
 
 (Martin, 2018/02/14)
