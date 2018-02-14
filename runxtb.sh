@@ -1,11 +1,15 @@
 #!/bin/bash
 
 #hlp ===== Not Part of xTB =====
-#hlp This is a little helper script to use xTB from
-#hlp https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb
-#hlp without making changes to any local setting files like
-#hlp '.bashrc', '.profile', etc.
+#hlp DESCRIPTION:
+#hlp   This is a little helper script to use xTB from
+#hlp   https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb
+#hlp   without making changes to any local setting files like
+#hlp   '.bashrc', '.profile', etc.
 #hlp  
+#hlp USAGE:
+#hlp   runxtb.sh [script options] <coord_file> [xtb options]
+#hlp 
 
 #
 # Print logging information and warnings nicely.
@@ -186,6 +190,32 @@ print_info ()
 }
 
 #
+# Get settings from configuration file
+#
+
+test_rc_file ()
+{
+  local test_runxtbrc="$1"
+  if [[ -f "$test_runxtbrc" && -r "$test_runxtbrc" ]] ; then
+    echo "$test_runxtbrc"
+  else
+    return 1
+  fi
+}
+
+get_rc ()
+{
+  local test_runxtbrc_dir test_runxtbrc_loc
+  while [[ ! -z $1 ]] ; do
+    test_runxtbrc_dir="$1"
+    shift
+    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc" && continue)"
+    test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc" && continue)"
+  done
+  echo "$test_runxtbrc_loc"
+}
+
+#
 # Check if file exists and prevent overwriting
 #
 
@@ -243,6 +273,7 @@ EOF
 
 echo "$submitscript_filename"
 }
+
 #
 # Start main script
 #
@@ -262,24 +293,26 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 #
 # Set some Defaults
 #
+
 OMP_NUM_THREADS=4
 MKL_NUM_THREADS=4
 OMP_STACKSIZE=1000m
 xtb_callname="xtb"
 requested_walltime="24:00:00"
 run_interactive="yes"
+exit_status=0
 
 stay_quiet=1        # Suppress logging messages for finding the script path
 [[ "$1" == "debug" ]] && stay_quiet=0 && shift # Secret debugging switch
 
 scriptpath="$(get_bindir "$0" "Directory of runxtb")"
-runxtbrc="$scriptpath/.runxtbrc"
+runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "$PWD")"
 
 stay_quiet=0        # Reset to default logging
 
-if [[ -f "$runxtbrc" && -r "$runxtbrc" ]] ; then
-  . "$runxtbrc"
-  message "Applied configuration file settings."
+if [[ ! -z "$runxtbrc_loc" ]] ; then
+  . "$runxtbrc_loc"
+  message "Configuration file '$runxtbrc_loc' applied."
 fi
 
 OPTIND=1
@@ -367,7 +400,12 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   backup_if_exists "$output_file"
   submitscript=$(write_submit_script "$output_file")
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
-    qsub "$submitscript"
+    submit_id="$(qsub "$submitscript" || exit_status="$?")"
+    if (( exit_status > 0 )) ; then
+      warning "Submission went wrong."
+    else
+      message "Submitted as $submit_id"
+    fi
   else
     message "Created submit PBS script, to start the job:"
     message "  qsub $submitscript"
@@ -375,10 +413,11 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
 elif [[ $run_interactive == "yes" ]] ; then
   if [[ -z $output_file ]] ; then 
     $xtb_callname "${xtb_commands[@]}" 
-    exit $? # Carry over exit status
+    exit_status="$?" # Carry over exit status
   else
     backup_if_exists "$output_file"
     $xtb_callname "${xtb_commands[@]}" > "$output_file"
+    exit_status="$?" # Carry over exit status
   fi
 else
   fatal "Unrecognised mode; abort."
@@ -387,3 +426,4 @@ fi
 message "Wrapper script completed."
 exec 3>&-
 #hlp ===== End of Script ===== (Martin, 2018/02/13)
+exit $exit_status
