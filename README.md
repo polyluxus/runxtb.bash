@@ -68,6 +68,7 @@ The following script options are available:
               If specified twice, it will also suppress warnings,
               if specified more than twice, it will suppress also errors.
  * `-h`       Prints a small help text and current configuration.
+ * `-H`       Opens the `HOWTO` (manual) of the original distribution.
 
 ## Included files
 
