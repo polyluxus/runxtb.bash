@@ -65,6 +65,21 @@ helpme ()
     exit 0
 }
 
+#
+# Display the HOWTO (manual) of xTB
+#
+
+display_howto ()
+{
+    [[ -e "$XTBHOME/HOWTO" ]] || fatal "Cannot find 'HOWTO' of xTB."
+    if command -v less > /dev/null ; then
+      less "$XTBHOME/HOWTO"
+    else
+      cat "$XTBHOME/HOWTO"
+    fi
+    exit 0
+}
+
 get_bindir ()
 {
 #  Taken from https://stackoverflow.com/a/246128/3180795
@@ -346,7 +361,7 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSiB:qh options ; do
+while getopts :p:m:w:o:sSiB:qhH options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
@@ -387,6 +402,9 @@ while getopts :p:m:w:o:sSiB:qh options ; do
        ;;
     #hlp   -h       Prints this help text
     h) helpme ;;
+
+    #hlp   -H       Displays the HOWTO file from the xtb distribution
+    H) display_howto ;;
 
    \?) fatal "Invalid option: -$OPTARG." ;;
 
