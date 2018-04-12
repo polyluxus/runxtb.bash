@@ -5,9 +5,9 @@
    OMP_NUM_THREADS=4
    MKL_NUM_THREADS=4
 
-## Set default memory to be used
+## Set default memory to be used in megabyte
 #
-   OMP_STACKSIZE=1000m
+   OMP_STACKSIZE=1000
 
 ## Set directory (not including the executable)
 #
@@ -34,6 +34,16 @@
 ## (yes: interactive; no: write script; sub: write and submit)
 #
    run_interactive="yes"
+
+## Set default queueing system for which the script should be written
+## (pbs-gen, or bsub-rwth)
+#
+   request_qsys="bsub-rwth"
+
+## If project options are enabled (i.e. for bsub-rwth), 
+## set to which it should be accounted
+#
+   bsub_rwth_project="default"
 
 ## Set Walltime for non-interactive mode
 #

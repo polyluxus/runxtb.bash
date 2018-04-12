@@ -47,7 +47,7 @@ The following script options are available:
               This will set `OMP_NUM_THREADS=<ARG>` and `MKL_NUM_THREADS=<ARG>`.
               (Default defined within the script is `4`.)
  * `-m <ARG>` Secify the memory to be used (in megabyte).
-              This will set `OMP_STACKSIZE=<ARG>m`. (Default in the script is `1000m`.)
+              This will set `OMP_STACKSIZE=<ARG>`. (Default in the script is `1000`.)
  * `-o <ARG>` Trap the output (without errors) of `xtb` into a file called `<ARG>`.
               No output file will be created in interactive mode by default.
               In non-interactive mode it will be derived from the first argument given
@@ -56,8 +56,14 @@ The following script options are available:
               This resulting file needs to be sumbitted separately, 
               which might be useful if review is necessary 
               (configuration option `run_interactive=no`).
- * `-S`       Write PBS submitscript and directly submit it to the queue
+ * `-S`       Write submitscript and directly submit it to the queue.
+              This also requires setting a queueing system with `-Q` (see below).
               (configuration option `run_interactive=sub`).
+ * `-Q <ARG>` Set a queueing system for which the submitscript should be prepared.
+              Currently supported are `pbs-gen` and `bsub-rwth`.
+              (configuration option `request_qsys=<ARG>`)
+ * `-P <ARG>` Accont to project `<ARG>`, which will also trigger
+              `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
  * `-i`       Execute in interactive mode. (Default without configuration.)
               This option is useful to overwrite rc settings
               (configuration option `run_interactive=yes`).
@@ -99,4 +105,4 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/02/14)
+(Martin, 2018/04/12)
