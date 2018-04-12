@@ -264,7 +264,8 @@ backup_if_exists ()
         ((filecount++))
       done
       warning "File '$1' exists, will make backup."
-      local move_message="$(mv -v "$1" "$1.$filecount")"
+      local move_message
+      move_message="$(mv -v "$1" "$1.$filecount")"
       message "$move_message"
     fi
 }
@@ -275,38 +276,82 @@ backup_if_exists ()
 
 write_submit_script ()
 {
-    message "Remote mode selected, creating PBS job script instead."
-    local submitscript_filename="${1%.*}.sh"
+    message "Remote mode selected, creating job script instead."
+    # Possible values for queue are pbs-gen bsub-rwth
+    local queue="$1" queue_short 
+    local output_file_local="$2" submitscript_filename
+    [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
+    queue_short="${queue%-*}"
+    submitscript_filename="${output_file_local%.*}.${queue_short}.bash"
+    debug "Selected queue: $queue; short: $queue_short"
     backup_if_exists "$submitscript_filename"
+    debug "Will write submitscript to: $submitscript"
 
-    cat > "$submitscript_filename" <<-EOF
-#!/bin/sh
-#PBS -l nodes=1:ppn=$OMP_NUM_THREADS
-#PBS -l mem=$OMP_STACKSIZE
-#PBS -l walltime=$requested_walltime
-#PBS -N ${submitscript_filename%.*}
-#PBS -m ae
-#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
-#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
+    # Open file descriptor 9 for writing
+    exec 9> "$submitscript_filename"
 
-echo "This is $nodename"
-echo "OS $operatingsystem ($architecture)"
-echo "Running on $OMP_NUM_THREADS $processortype."
-echo "Calculation with xtb from $PWD."
-echo "Working directry is \$PBS_O_WORKDIR"
-cd "\$PBS_O_WORKDIR"
+    echo "#!/bin/bash" >&9
+    echo "# Submission script automatically created with runxtb.sh" >&9
 
-export PATH="\$PATH:$XTBHOME"
-export XTBHOME="$XTBHOME" 
-export OMP_NUM_THREADS="$OMP_NUM_THREADS"
-export MKL_NUM_THREADS="$MKL_NUM_THREADS"
-export OMP_STACKSIZE="$OMP_STACKSIZE"  
+    # Add some overhead
+    local corrected_OMP_STACKSIZE
+    corrected_OMP_STACKSIZE=$(( OMP_STACKSIZE + 50 ))
+    
+    # Header is different for the queueing systems
+    if [[ "$queue" =~ [Pp][Bb][Ss] ]] ; then
+      cat >&9 <<-EOF
+			#PBS -l nodes=1:ppn=$OMP_NUM_THREADS
+			#PBS -l mem=${corrected_OMP_STACKSIZE}m
+			#PBS -l walltime=$requested_walltime
+			#PBS -N ${submitscript_filename%.*}
+			#PBS -m ae
+			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
+			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
+			EOF
+    elif [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+      cat >&9 <<-EOF
+			#BSUB -n $OMP_NUM_THREADS
+			#BSUB -a openmp
+			#BSUB -M $corrected_OMP_STACKSIZE
+			#BSUB -W ${requested_walltime%:*}
+			#BSUB -J ${submitscript_filename%.*}
+			#BSUB -N
+			#BSUB -o $submitscript_filename.o%J
+			#BSUB -e $submitscript_filename.e%J
+			EOF
+      if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
+        echo "#BSUB -R select[hpcwork]" >&9
+      fi
+      if [[ ! -z $bsub_rwth_project ]] ; then
+        echo "#BSUB -P $bsub_rwth_project" >&9
+      fi
+    else
+      fatal "Unrecognised queueing system '$queue'."
+    fi
 
-date
-$xtb_callname ${xtb_commands[@]} > "$output_file"
-date
+    # The body is the same for all queues (so far)
+    cat >&9 <<-EOF
 
-EOF
+		echo "This is $nodename"
+		echo "OS $operatingsystem ($architecture)"
+		echo "Running on $OMP_NUM_THREADS $processortype."
+		echo "Calculation with xtb from $PWD."
+		echo "Working directry is $PWD"
+
+		cd "$PWD"
+		
+		export PATH="\$PATH:$XTBHOME"
+		export XTBHOME="$XTBHOME" 
+		export OMP_NUM_THREADS="$OMP_NUM_THREADS"
+		export MKL_NUM_THREADS="$MKL_NUM_THREADS"
+		export OMP_STACKSIZE="${OMP_STACKSIZE}m"  
+		ulimit -s unlimited
+
+		date
+		$xtb_callname ${xtb_commands[@]} > "$output_file"
+		date
+		
+		EOF
 
 echo "$submitscript_filename"
 }
@@ -328,15 +373,23 @@ architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
 #
+# Details about this script
+#
+version="0.1.0"
+versiondate="2018-04-12"
+
+#
 # Set some Defaults
 #
 
 OMP_NUM_THREADS=4
 MKL_NUM_THREADS=4
-OMP_STACKSIZE=1000m
+OMP_STACKSIZE=1000
 xtb_callname="xtb"
 requested_walltime="24:00:00"
 run_interactive="yes"
+request_qsys="pbs-gen"
+bsub_rwth_project="default"
 exit_status=0
 
 stay_quiet=0
@@ -355,26 +408,27 @@ runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "$PWD")"
 debug "runxtbrc_loc=$runxtbrc_loc"
 
 if [[ ! -z $runxtbrc_loc ]] ; then
+  # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
   . "$runxtbrc_loc"
   message "Configuration file '$runxtbrc_loc' applied."
 fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSiB:qhH options ; do
+while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
-    #hlp   for the same options, only the last one will have an eefect.
+    #hlp   for the same options, only the last one will have an effect.
     #hlp 
     #hlp   -p <ARG> Set number of professors
     p) validate_integer "$OPTARG"
        OMP_NUM_THREADS="$OPTARG"
        MKL_NUM_THREADS="$OPTARG"
        ;;
-    #hlp   -m <ARG> Set the number of memories (in megabyte?)
+    #hlp   -m <ARG> Set the number of memories (in megabyte)
     m) validate_integer "$OPTARG"
-       OMP_STACKSIZE="${OPTARG}m"
+       OMP_STACKSIZE="${OPTARG}"
        ;;
     #hlp   -w <ARG> Set the walltime when sent to the queue
     w) requested_walltime=$(format_walltime_or_exit "$OPTARG")
@@ -382,11 +436,22 @@ while getopts :p:m:w:o:sSiB:qhH options ; do
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
     o) output_file="$OPTARG"
        ;;
-    #hlp   -s       Write PBS submitscript (instead of interactive execution)
+    #hlp   -s       Write submitscript (instead of interactive execution)
+    #hlp            Requires '-Q' to be set. (Default: pbs-gen)
     s) run_interactive="no"
        ;;
-    #hlp   -S       Write PBS submitscript and submit it to the queue.
+    #hlp   -S       Write submitscript and submit it to the queue.
+    #hlp            Requires '-Q' to be set. (Default: pbs-gen)
     S) run_interactive="sub"
+       ;;
+    #hlp   -Q <ARG> Select queueing system (pbs-gen, bsub-rwth)
+    Q) request_qsys="$OPTARG"
+       ;;
+    #hlp   -P <ARG> Account to project <ARG>.
+    #hlp            This will automatically set '-Q bsub-rwth', too.
+    #hlp            (It will not trigger remote execution.)
+    P) bsub_rwth_project="$OPTARG"
+       request_qsys="bsub-rwth"
        ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
     i) run_interactive="yes"
@@ -419,6 +484,8 @@ while getopts :p:m:w:o:sSiB:qhH options ; do
     #hlp   requested_walltime="$requested_walltime"
     #hlp   outputfile="$output_file"
     #hlp   run_interactive="$run_interactive"
+    #hlp   request_qsys="$request_qsys"
+    #hlp   bsub_rwth_project="$bsub_rwth_project"
   esac
 done
 
@@ -441,6 +508,7 @@ warning "This is only a wrapper to set paths and variables."
 check_program_or_exit "$XTBHOME/$xtb_callname"
 add_to_PATH "$XTBHOME"
 export XTBHOME OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
+ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
 debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
@@ -449,20 +517,27 @@ debug "          outputfile=$output_file run_interactive=$run_interactive"
 print_info
 
 if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
+  [[ -z $request_qsys ]] && fatal "No queueing system specified."
   [[ -z $output_file ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
-  submitscript=$(write_submit_script "$output_file")
+  submitscript=$(write_submit_script "$request_qsys" "$output_file")
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
     debug "Created '$submitscript'."
-    submit_id="$(qsub "$submitscript")" || exit_status="$?"
+    if [[ $request_qsys =~ [Pp][Bb][Ss] ]] ; then
+      submit_id="Submitted as $(qsub "$submitscript")" || exit_status="$?"
+    elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+      submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
+      submit_id="${submit_id#Info: }"
+    else
+      fatal "Unrecognised queueing system '$request_qsys'."
+    fi
     if (( exit_status > 0 )) ; then
       warning "Submission went wrong."
     else
-      message "Submitted as $submit_id"
+      message "$submit_id"
     fi
   else
-    message "Created submit PBS script, to start the job:"
-    message "  qsub $submitscript"
+    message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive == "yes" ]] ; then
   if [[ -z $output_file ]] ; then 
@@ -477,7 +552,7 @@ else
   fatal "Unrecognised mode; abort."
 fi
 
-message "Wrapper script completed."
+message "Runxtb ($version, $versiondate) wrapper script completed."
 exec 3>&-
-#hlp ===== End of Script ===== (Martin, 2018/02/14)
+#hlp ===== End of Script ===== (Martin, $version, $versiondate)
 exit $exit_status
