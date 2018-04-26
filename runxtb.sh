@@ -340,8 +340,23 @@ write_submit_script ()
 
 		cd "$PWD"
 		
-		export PATH="\$PATH:$XTBHOME"
-		export XTBHOME="$XTBHOME" 
+		EOF
+
+    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+      (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
+      cat >&9 <<-EOF
+			# Loading the modules should take care of everything except threats
+			modules load ${load_modules[*]}
+			 
+			EOF
+    else
+    	cat >&9 <<-EOF
+			export PATH="\$PATH:$XTBHOME"
+			export XTBHOME="$XTBHOME" 
+			EOF
+    fi
+
+    cat >&9 <<-EOF
 		export OMP_NUM_THREADS="$OMP_NUM_THREADS"
 		export MKL_NUM_THREADS="$MKL_NUM_THREADS"
 		export OMP_STACKSIZE="${OMP_STACKSIZE}m"  
@@ -391,7 +406,10 @@ run_interactive="yes"
 request_qsys="pbs-gen"
 bsub_rwth_project="default"
 exit_status=0
-
+use_modules="false"
+declare -a load_modules
+#load_modules[0]="CHEMISTRY"
+#load_modules[1]="xtb"
 stay_quiet=0
 
 if [[ "$1" == "debug" ]] ; then
@@ -452,6 +470,10 @@ while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
     #hlp            (It will not trigger remote execution.)
     P) bsub_rwth_project="$OPTARG"
        request_qsys="bsub-rwth"
+       ;;
+    #hlp   -M       Use modules instead of paths (work in progress).
+    #hlp            Needs a specified modules list (set in rc).
+    M) use_modules=true
        ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
     i) run_interactive="yes"
