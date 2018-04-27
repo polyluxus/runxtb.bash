@@ -194,7 +194,14 @@ check_program_or_exit ()
 {
     if [[ -f "$1" && -x "$1" ]] ; then
       message "Found programm '$1'."
+      return 0
     else
+      if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+        message "Programm '$1' does not seem to exist or is not executable."
+        message "Will use modules instead."
+        unset XTBHOME
+        return 0
+      fi
       warning "Programm '$1' does not seem to exist or is not executable."
       warning "The script might not have been set up properly."
       fatal   "Cannot continue."
@@ -277,7 +284,7 @@ backup_if_exists ()
 write_submit_script ()
 {
     message "Remote mode selected, creating job script instead."
-    # Possible values for queue are pbs-gen bsub-rwth
+    # Possible values for queue are pbs-gen bsub-gen bsub-rwth
     local queue="$1" queue_short 
     local output_file_local="$2" submitscript_filename
     [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
@@ -308,7 +315,8 @@ write_submit_script ()
 			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
 			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
 			EOF
-    elif [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+    #elif [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+    elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
 			#BSUB -n $OMP_NUM_THREADS
 			#BSUB -a openmp
@@ -319,17 +327,20 @@ write_submit_script ()
 			#BSUB -o $submitscript_filename.o%J
 			#BSUB -e $submitscript_filename.e%J
 			EOF
-      if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
-        echo "#BSUB -R select[hpcwork]" >&9
+      if [[ ! -z $bsub_project ]] ; then
+        echo "#BSUB -P $bsub_project" >&9
       fi
-      if [[ ! -z $bsub_rwth_project ]] ; then
-        echo "#BSUB -P $bsub_rwth_project" >&9
+      #add some more specific setup for RWTH
+      if [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+        if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
+          echo "#BSUB -R select[hpcwork]" >&9
+        fi
       fi
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
 
-    # The body is the same for all queues (so far)
+    # The following part of the body is the same for all queues 
     cat >&9 <<-EOF
 
 		echo "This is $nodename"
@@ -342,6 +353,7 @@ write_submit_script ()
 		
 		EOF
 
+    # Use modules or path
     if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
@@ -390,8 +402,8 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 #
 # Details about this script
 #
-version="0.1.0"
-versiondate="2018-04-12"
+version="0.1.1"
+versiondate="2018-04-27"
 
 #
 # Set some Defaults
@@ -404,7 +416,7 @@ xtb_callname="xtb"
 requested_walltime="24:00:00"
 run_interactive="yes"
 request_qsys="pbs-gen"
-bsub_rwth_project="default"
+bsub_project="default"
 exit_status=0
 use_modules="false"
 declare -a load_modules
@@ -433,7 +445,7 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
+while getopts :p:m:w:o:sSQ:P:Ml:iB:qhH options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
@@ -468,12 +480,19 @@ while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
     #hlp   -P <ARG> Account to project <ARG>.
     #hlp            This will automatically set '-Q bsub-rwth', too.
     #hlp            (It will not trigger remote execution.)
-    P) bsub_rwth_project="$OPTARG"
+    P) bsub_project="$OPTARG"
        request_qsys="bsub-rwth"
        ;;
     #hlp   -M       Use modules instead of paths (work in progress).
     #hlp            Needs a specified modules list (set in rc).
     M) use_modules=true
+       ;;
+    #hlp   -l <ARG> Specify a module to be used (work in progress). This will also invoke -M.
+    #hlp            May be specified multiple times to create a list.
+    #hlp            The modules need to be specified in the order they have to be loaded.
+    #hlp            (Can also be set in the rc.)
+    l) use_modules=true
+       load_modules[${#load_modules[*]}]="$OPTARG"
        ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
     i) run_interactive="yes"
@@ -500,6 +519,8 @@ while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
     #hlp Current settings:
     #hlp   XTBHOME="$XTBHOME" 
     #hlp   xtb_callname="$xtb_callname"
+    #hlp   use_modules="$use_modules" 
+    #hlp   load_modules=("${load_modules[*]}")
     #hlp   OMP_NUM_THREADS="$OMP_NUM_THREADS"
     #hlp   MKL_NUM_THREADS="$MKL_NUM_THREADS"
     #hlp   OMP_STACKSIZE="$OMP_STACKSIZE"
@@ -507,7 +528,7 @@ while getopts :p:m:w:o:sSQ:P:iB:qhH options ; do
     #hlp   outputfile="$output_file"
     #hlp   run_interactive="$run_interactive"
     #hlp   request_qsys="$request_qsys"
-    #hlp   bsub_rwth_project="$bsub_rwth_project"
+    #hlp   bsub_project="$bsub_project"
   esac
 done
 
@@ -520,6 +541,8 @@ debug "Guessed jobname is '$jobname'."
 xtb_commands=("$@")
 debug "Commands for xtb are '${xtb_commands[*]}'."
 
+(( ${#xtb_commands[*]} == 0 )) && fatal "There are no commands to pass on to xtb."
+
 # Before proceeding, print a warning, that this is  N O T  the real program.
 warning "This is not the original xtb program!"
 warning "This is only a wrapper to set paths and variables."
@@ -527,11 +550,21 @@ warning "This is only a wrapper to set paths and variables."
 # If not set explicitly, assume xtb is in same directory as script
 [[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
 
-check_program_or_exit "$XTBHOME/$xtb_callname"
-add_to_PATH "$XTBHOME"
-export XTBHOME OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
+if check_program_or_exit "$XTBHOME/$xtb_callname" ; then
+  add_to_PATH "$XTBHOME"
+  export XTBHOME PATH
+fi
+
+if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+  (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
+  # Loading the modules should take care of everything except threats
+  modules load "${load_modules[*]}" || fatal "Failed loading modules."
+fi
+
+export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
 debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
+debug "          use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
@@ -547,7 +580,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     debug "Created '$submitscript'."
     if [[ $request_qsys =~ [Pp][Bb][Ss] ]] ; then
       submit_id="Submitted as $(qsub "$submitscript")" || exit_status="$?"
-    elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+    elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
       submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"
     else

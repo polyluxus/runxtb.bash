@@ -43,7 +43,7 @@
 ## If project options are enabled (i.e. for bsub-rwth), 
 ## set to which it should be accounted
 #
-   bsub_rwth_project="default"
+   bsub_project="default"
 
 ## If modules are installed, their use can be enabled here.
 ## The default is setting the path, see above.

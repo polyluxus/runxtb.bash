@@ -39,7 +39,7 @@ runxtb.sh [script options] <coord_file> [xtb options]
 Any switches used will overwrite rc settings, 
 which take precedence over the built-in defaults.
 For the same options/ modes, only the last one will have an effect,
-e.g. specifying `-sSi` wil run interactively.
+e.g. specifying `-sSi` will run interactively.
 
 The following script options are available:
 
@@ -64,6 +64,15 @@ The following script options are available:
               (configuration option `request_qsys=<ARG>`)
  * `-P <ARG>` Accont to project `<ARG>`, which will also trigger
               `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
+ * `-M`       Use preinstalled modules instead of paths. This is currently a work in progress.
+              This also needs a specified module or a list of modules, 
+              which can be set with `-l <ARG>`(see below) or in the rc
+              (configuration option `use_modules=true`).
+ * `-l <ARG>` Specify a module to be used. This will also invoke `-M`.
+              The option may be specified multiple times to create a list (stored as an array).
+              The modules need to be specified in the order they have to be loaded.
+              This can also be set in the rc 
+              (configuration option `load_modules[<N>]=<ARG>` with `<N>` being the integer load order).
  * `-i`       Execute in interactive mode. (Default without configuration.)
               This option is useful to overwrite rc settings
               (configuration option `run_interactive=yes`).
@@ -105,4 +114,4 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/04/12)
+(Martin, 2018/04/27)
