@@ -327,7 +327,11 @@ write_submit_script ()
 			#BSUB -o $submitscript_filename.o%J
 			#BSUB -e $submitscript_filename.e%J
 			EOF
-      if [[ ! -z $bsub_project ]] ; then
+      # If 'bsub_project' is empty, or '0', or 'default' (in any case, truncated after def)
+      # do not write this line to the script.
+      if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+        message "No project selected."
+      else
         echo "#BSUB -P $bsub_project" >&9
       fi
       #add some more specific setup for RWTH
@@ -588,6 +592,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     fi
     if (( exit_status > 0 )) ; then
       warning "Submission went wrong."
+      warning "Probable cause: $submit_id"
     else
       message "$submit_id"
     fi
@@ -597,6 +602,12 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
 elif [[ $run_interactive == "yes" ]] ; then
   if [[ -z $output_file ]] ; then 
     $xtb_callname "${xtb_commands[@]}" 
+    exit_status="$?" # Carry over exit status
+  elif [[ "$output_file" =~ ^(0|[Aa][Uu][Tt][Oo])$ ]] ; then
+    # Enables automatic generation of output-filename in 'interactive' mode
+    output_file="$jobname.runxtb.out"
+    backup_if_exists "$output_file"
+    $xtb_callname "${xtb_commands[@]}" > "$output_file"
     exit_status="$?" # Carry over exit status
   else
     backup_if_exists "$output_file"
