@@ -347,9 +347,9 @@ write_submit_script ()
     # The following part of the body is the same for all queues 
     cat >&9 <<-EOF
 
-		echo "This is $nodename"
-		echo "OS $operatingsystem ($architecture)"
-		echo "Running on $OMP_NUM_THREADS $processortype."
+		echo "This is \$(uname -n)"
+		echo "OS \$(uname -p) (\$(uname -p))"
+		echo "Running on $OMP_NUM_THREADS \$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)."
 		echo "Calculation with xtb from $PWD."
 		echo "Working directry is $PWD"
 
@@ -362,7 +362,8 @@ write_submit_script ()
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
-			module load ${load_modules[*]}
+			module load ${load_modules[*]} 2>&1
+			# Because otherwise it would go to the error output.
 			 
 			EOF
     else
@@ -570,7 +571,7 @@ if check_program_or_exit "$XTBHOME/$xtb_callname" ; then
   export XTBHOME PATH
 fi
 
-if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+if [[ "$run_interactive" =~ [Yy][Ee][Ss] && "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
   # Loading the modules should take care of everything except threats
   module load "${load_modules[*]}" || fatal "Failed loading modules."
@@ -579,7 +580,7 @@ fi
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
 debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
-debug "          use_modules=$use_modules load_modules=(${load_modules[*]})"
+debug "(current) use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
@@ -588,7 +589,7 @@ print_info
 
 if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   [[ -z $request_qsys ]] && fatal "No queueing system specified."
-  [[ -z $output_file ]] && output_file="$jobname.subxtb.out"
+  [[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
   submitscript=$(write_submit_script "$request_qsys" "$output_file")
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
@@ -610,7 +611,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   else
     message "Created $request_qsys submit script '$submitscript'."
   fi
-elif [[ $run_interactive == "yes" ]] ; then
+elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
   if [[ -z $output_file ]] ; then 
     $xtb_callname "${xtb_commands[@]}" 
     exit_status="$?" # Carry over exit status

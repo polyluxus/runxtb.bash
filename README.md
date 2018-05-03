@@ -39,7 +39,8 @@ If the script has been configured with `.runxtbrc`,
 a file that won't be overwritten via git, 
 then these settings should be reviewed.
 While I try to avoid renaming internal options, it sometimes is necessary.
-In any case, new feature may require new settings.
+In any case, a new feature may require new settings;
+hence, this should also be checked.
 
 ## Usage and options
 
