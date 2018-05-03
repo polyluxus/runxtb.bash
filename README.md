@@ -6,9 +6,10 @@ extended tight-binding semi-empirical program package
 from Stefan Grimme's group at the University of Bonn.
 
 It makes it unnecessary to set environment variables like 
-`OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OMP_STACKSIZE`, and `XTBHOME`. 
+`OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OMP_STACKSIZE`, and `XTBHOME` globally,
+for example via the `.bashrc`. 
 It also provides a mechanism to automatically trap the output
-that would normally go to standard out.
+that would normally go to standard out (i.e. the terminal).
 
 ## Installation
 
@@ -24,11 +25,21 @@ in the directories in following order:
 `scriptpath`, `\home\$USER`, and `$PWD`.
 If `.runxtbrc` is found, it won't look for `runxtb.rc`.
 The last one found will be used to set the (local) default parameters. 
-This gives the possibility that every user may configure local settings.
+This gives the possibility that every user may configure local settings,
+it also gives the possibilities to overwrite settings for one directory only.
 A summary of the settings to be used are given with the `-h` option.
 
 This directory is currently set up to find `runxtb.rc` and should test 
 sucessfully without any changes.
+
+## Updating
+
+Updating should be as easy as pulling the new version. 
+If the script has been configured with `.runxtbrc`, 
+a file that won't be overwritten via git, 
+then these settings should be reviewed.
+While I try to avoid renaming internal options, it sometimes is necessary.
+In any case, new feature may require new settings.
 
 ## Usage and options
 
@@ -39,7 +50,7 @@ runxtb.sh [script options] <coord_file> [xtb options]
 Any switches used will overwrite rc settings, 
 which take precedence over the built-in defaults.
 For the same options/ modes, only the last one will have an effect,
-e.g. specifying `-sSi` will run interactively.
+e.g. specifying `-sSi` will run interactively (immediately).
 
 The following script options are available:
 
@@ -52,7 +63,9 @@ The following script options are available:
               No output file will be created in interactive mode by default.
               In non-interactive mode it will be derived from the first argument given
               after the options, which should be `coord_file`.
- * `-s`       Write PBS submitscript instead of interactive execution.
+              The automatic generation of the file name can be triggered with `-o0`
+              or `-o auto`, and can be overwritten explicitly with `-c ''` (space is important).
+ * `-s`       Write a submitscript instead of interactive execution (PBS is default).
               This resulting file needs to be sumbitted separately, 
               which might be useful if review is necessary 
               (configuration option `run_interactive=no`).
@@ -60,12 +73,12 @@ The following script options are available:
               This also requires setting a queueing system with `-Q` (see below).
               (configuration option `run_interactive=sub`).
  * `-Q <ARG>` Set a queueing system for which the submitscript should be prepared.
-              Currently supported are `pbs-gen` and `bsub-rwth`.
-              (configuration option `request_qsys=<ARG>`)
- * `-P <ARG>` Accont to project `<ARG>`, which will also trigger
+              Currently supported are `pbs-gen`, `bsub-gen`, and `bsub-rwth` 
+              (configuration option `request_qsys=<ARG>`).
+ * `-P <ARG>` Accont to project `<ARG>`, which will also (currently) trigger
               `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
  * `-M`       Use preinstalled modules instead of paths. This is currently a work in progress.
-              This also needs a specified module or a list of modules, 
+              This option also needs a specified module or a list of modules, 
               which can be set with `-l <ARG>`(see below) or in the rc
               (configuration option `use_modules=true`).
  * `-l <ARG>` Specify a module to be used. This will also invoke `-M`.
@@ -79,6 +92,8 @@ The following script options are available:
  * `-B <ARG>` Set the absolute path to the executable `xtb` to `<ARG>`.
               The name of the program needs to be included.
               In the configuration file these are separated.
+ * `-C <ARG>` Set the name of the program directly.
+              This may be useful to access a different executeable from the package.
  * `-q`       Suppress any logging messages of the script.
               If specified twice, it will also suppress warnings,
               if specified more than twice, it will suppress also errors.
@@ -114,4 +129,4 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/04/27)
+(Martin, 2018/05/03)

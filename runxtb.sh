@@ -361,8 +361,8 @@ write_submit_script ()
     if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
-			# Loading the modules should take care of everything except threats
-			modules load ${load_modules[*]}
+			# Loading the modules should take care of everything except threads
+			module load ${load_modules[*]}
 			 
 			EOF
     else
@@ -407,7 +407,7 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 # Details about this script
 #
 version="0.1.1"
-versiondate="2018-04-27"
+versiondate="2018-05-03"
 
 #
 # Set some Defaults
@@ -427,6 +427,7 @@ declare -a load_modules
 #load_modules[0]="CHEMISTRY"
 #load_modules[1]="xtb"
 stay_quiet=0
+ignore_empty_commandline=false
 
 if [[ "$1" == "debug" ]] ; then
   # Secret debugging switch
@@ -449,7 +450,7 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSQ:P:Ml:iB:qhH options ; do
+while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
@@ -505,7 +506,12 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:qhH options ; do
     B) XTBHOME="$(get_bindir "$OPTARG" "XTBHOME")"
        xtb_callname="${OPTARG##*/}"
        ;;
-
+    #hlp   -C <ARG> Change the callname of the script.
+    #hlp            This can be useful to request a different executable from the package.
+    #hlp            No warning will be issued if the command line is empty.
+    C) xtb_callname="$OPTARG"
+       ignore_empty_commandline="true"
+       ;;
     #hlp   -q       Stay quiet! (Only this startup script)
     #hlp            May be specified multiple times to be more forceful.
     q) (( stay_quiet++ )) 
@@ -541,11 +547,16 @@ shift $(( OPTIND - 1 ))
 # Assume jobname from name of coordinate file, cut xyz (if exists)
 jobname="${1%.xyz}"
 debug "Guessed jobname is '$jobname'."
+
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
 debug "Commands for xtb are '${xtb_commands[*]}'."
 
-(( ${#xtb_commands[*]} == 0 )) && fatal "There are no commands to pass on to xtb."
+if [[ "$ignore_empty_commandline" =~ [Ff][Aa][Ll][Ss][Ee] ]] ; then
+  (( ${#xtb_commands[*]} == 0 )) && warning "There are no commands to pass on to xtb."
+else
+  debug "Ignore empty command line."
+fi
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
 warning "This is not the original xtb program!"
@@ -562,7 +573,7 @@ fi
 if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
   # Loading the modules should take care of everything except threats
-  modules load "${load_modules[*]}" || fatal "Failed loading modules."
+  module load "${load_modules[*]}" || fatal "Failed loading modules."
 fi
 
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
@@ -606,6 +617,7 @@ elif [[ $run_interactive == "yes" ]] ; then
   elif [[ "$output_file" =~ ^(0|[Aa][Uu][Tt][Oo])$ ]] ; then
     # Enables automatic generation of output-filename in 'interactive' mode
     output_file="$jobname.runxtb.out"
+    message "Will write xtb output to '$output_file'."
     backup_if_exists "$output_file"
     $xtb_callname "${xtb_commands[@]}" > "$output_file"
     exit_status="$?" # Carry over exit status
