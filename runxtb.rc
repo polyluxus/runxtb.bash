@@ -1,4 +1,5 @@
-# Example .runxtbrc
+## Example .runxtbrc
+#
 
 ## Set default processes (= number of available cores)
 #
@@ -26,26 +27,49 @@
 #
    stay_quiet=0
 
-## Trap output of xtb in (default filename)
+## Trap output of xtb in a file.
+## Uncomment below to always use the same filename, 
+## which can be overwritten with the -o switch.
 #
 #  output_file="runxtb.out"
+#
+## Always generate a file with the output of xtb, but generate this name
+## automagically, arguments: 'auto' or '0'.
+#
+   output_file="auto"
+#
+## This can be overwritten with an explicit empty argument to -c:
+##   runxtb -c '' [other opts] <coord> [xtb options]
 
-## Set default mode 
+## Set default mode, where interactive means that it is calculated immediately.
 ## (yes: interactive; no: write script; sub: write and submit)
 #
    run_interactive="yes"
 
 ## Set default queueing system for which the script should be written
-## (pbs-gen, or bsub-rwth)
+## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source)
 #
    request_qsys="bsub-rwth"
 
-## If project options are enabled (i.e. for bsub-rwth), 
-## set to which it should be accounted
+## If project options are enabled (e.g. for bsub-rwth), 
+## set to which it should be accounted.
+## This can be overwritten with -P0 or -P default.
 #
-   bsub_rwth_project="default"
+   bsub_project="default"
+
+## If modules are installed, their use can be enabled here.
+## The default is setting the path, see above.
+#
+#  use_modules="true"
+#
+#  They need to be named, too. For example:
+#
+#  load_modules[0]="CHEMISTRY"
+#  load_modules[1]="xtb"
 
 ## Set Walltime for non-interactive mode
 #
 #  requested_walltime="24:00:00"
 
+#
+## End of example .runxtbrc (2018-05-03)
