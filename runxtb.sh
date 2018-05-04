@@ -80,12 +80,36 @@ display_howto ()
     exit 0
 }
 
+expand_tilde_path ()
+{
+  local test_string="$1" return_string
+  # Tilde does not expand like a variable, this might lead to files not being found
+  # The regex is trying to exclude special meanings of '~+' and '~-'
+  if [[ $test_string =~ ^~([^/+-]*)/(.*)$ ]] ; then
+    debug "Expandinging tilde, match: ${BASH_REMATCH[0]}"
+    if [[ -z ${BASH_REMATCH[1]} ]] ; then
+      # If the tilde is followed by a slash it expands to the users home
+      return_string="$HOME/${BASH_REMATCH[2]}"
+    else
+      # If the tilde is followed by a string, it expands to another user's home
+      return_string="/home/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+    debug "Expanded tilde to '$return_string'."
+  else
+    return_string="$test_string"
+  fi
+  echo "$return_string"
+}
+
 get_bindir ()
 {
-#  Taken from https://stackoverflow.com/a/246128/3180795
   local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
-  #  resolve $resolve_file until it is no longer a symlink
+
+  resolve_file=$(expand_tilde_path "$resolve_file")
+
+  # Taken in part from https://stackoverflow.com/a/246128/3180795
+  # resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
     link_target="$(readlink "$resolve_file")"
     if [[ $link_target == /* ]]; then
@@ -407,8 +431,8 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 #
 # Details about this script
 #
-version="0.1.1"
-versiondate="2018-05-03"
+version="0.1.2"
+versiondate="2018-05-04"
 
 #
 # Set some Defaults

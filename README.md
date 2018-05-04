@@ -19,12 +19,16 @@ There is - in principle - no need to configure it.
 You can also use it from any directory, if you set the path to the
 executable manually on the command line (see below).  
 Lastly, and my personally preferred way, is to configure the script.
-It will first look for a file `.runxtbrc`, 
-then for a file `runxtb.rc` (example included), 
-in the directories in following order:
+In the configure subdirectory are a few more examples for rc files.
+There is also a configure script, which will prompt for the values 
+with a short description.
+
+The wrapper script will first look for a file `.runxtbrc`, 
+then for a file `runxtb.rc` (examples included), 
+in directories of the following order:
 `scriptpath`, `\home\$USER`, and `$PWD`.
 If `.runxtbrc` is found, it won't look for `runxtb.rc`.
-The last one found will be used to set the (local) default parameters. 
+The last file found will be used to set the (local) default parameters. 
 This gives the possibility that every user may configure local settings,
 it also gives the possibilities to overwrite settings for one directory only.
 A summary of the settings to be used are given with the `-h` option.
@@ -130,4 +134,4 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/05/03)
+(Martin, 2018/05/04)
