@@ -22,6 +22,8 @@ Lastly, and my personally preferred way, is to configure the script.
 In the configure subdirectory are a few more examples for rc files.
 There is also a configure script, which will prompt for the values 
 with a short description.
+It will also try to recover values from a previous configuration
+in the same locations as outlined below.
 
 The wrapper script will first look for a file `.runxtbrc`, 
 then for a file `runxtb.rc` (examples included), 
@@ -134,4 +136,4 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/05/04)
+(Martin, 2018/05/07)

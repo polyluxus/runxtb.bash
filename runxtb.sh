@@ -277,6 +277,7 @@ get_rc ()
     elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
       return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
     fi
   done
   debug "(returned) return_runxtbrc_loc=$return_runxtbrc_loc"
@@ -432,7 +433,7 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 # Details about this script
 #
 version="0.1.2"
-versiondate="2018-05-04"
+versiondate="2018-05-07"
 
 #
 # Set some Defaults
@@ -564,6 +565,11 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
     #hlp   run_interactive="$run_interactive"
     #hlp   request_qsys="$request_qsys"
     #hlp   bsub_project="$bsub_project"
+    #hlp Platform information:
+    #hlp   nodename="$nodename"
+    #hlp   operatingsystem="$operatingsystem"
+    #hlp   architecture="$architecture"
+    #hlp   processortype="$processortype"
   esac
 done
 
@@ -608,6 +614,9 @@ debug "(current) use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
+debug "Platform: nodename=$nodename; operatingsystem=$operatingsystem"
+debug "(current) architecture=$architecture"
+debug "          processortype=$processortype"
 
 print_info
 

@@ -60,16 +60,18 @@
 ## If modules are installed, their use can be enabled here.
 ## The default is setting the path, see above.
 #
-#  use_modules="true"
+   use_modules="true"
+   use_modules="false"
 #
 #  They need to be named, too. For example:
 #
 #  load_modules[0]="CHEMISTRY"
 #  load_modules[1]="xtb"
+   load_modules[0]=""
 
 ## Set Walltime for non-interactive mode
 #
-#  requested_walltime="24:00:00"
+   requested_walltime="24:00:00"
 
 #
-## End of example .runxtbrc (2018-05-04)
+## End of example .runxtbrc (2018-05-07)

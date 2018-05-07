@@ -2,6 +2,10 @@
 
 # This script should be used to configure runxtb.sh
 
+#
+# Messaging functions
+#
+
 message ()
 {
     echo    "INFO    : $*" >&3
@@ -22,6 +26,10 @@ ask ()
 {
     echo    "Question: $*" >&3
 }
+
+# 
+# Support functions
+#
 
 backup_if_exists ()
 {
@@ -103,6 +111,203 @@ get_bindir ()
   fi
 }
 
+#
+# Recover from previous files
+#
+
+test_rc_file ()
+{
+  local test_runxtbrc="$1"
+  debug "Testing '$test_runxtbrc' ..."
+  if [[ -f "$test_runxtbrc" && -r "$test_runxtbrc" ]] ; then
+    echo "$test_runxtbrc"
+    return 0
+  else
+    debug "... missing."
+    return 1
+  fi
+}
+
+get_rc ()
+{
+  local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
+  while [[ ! -z $1 ]] ; do
+    test_runxtbrc_dir="$1"
+    shift
+    if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
+      return_runxtbrc_loc="$test_runxtbrc_loc" 
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
+    elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
+      return_runxtbrc_loc="$test_runxtbrc_loc"
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+    fi
+  done
+  debug "(returned) return_runxtbrc_loc=$return_runxtbrc_loc"
+  echo "$return_runxtbrc_loc"
+}
+
+recover_rc ()
+{
+  local runxtbrc_loc
+  # Guess some locations where a rc file could be located
+  runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "$PWD")"
+  debug "runxtbrc_loc=$runxtbrc_loc"
+  
+  if [[ ! -z $runxtbrc_loc ]] ; then
+    # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+    . "$runxtbrc_loc"
+    message "Configuration file '$runxtbrc_loc' applied."
+    ask "Would you like to specify a different file?"
+    if read_boolean ; then
+      ask "What file would you like to load?"
+      runxtbrc_loc=$(read_human_input)
+      if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
+        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        . "$runxtbrc_loc"
+        message "Configuration file '$runxtbrc_loc' applied."
+        message "If some values were not set in this file,"
+        message "the previously loaded values have not been replaced."
+      else
+        warning "Loading configuration file '$runxtbrc_loc' failed."
+        message "Continue with previously recovered settings."
+      fi
+    fi
+  else
+    debug "No configuration file in standard locations found."
+    ask "Would you like to specify a file to try to recover previous settings from?"
+    if read_boolean ; then
+      ask "What file would you like to load?"
+      runxtbrc_loc=$(read_human_input)
+      if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
+        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        . "$runxtbrc_loc"
+        message "Configuration file '$runxtbrc_loc' applied."
+      else
+        warning "Loading configuration file failed."
+        return 1
+      fi
+    else
+      return 1
+    fi
+    return 1
+  fi
+
+  use_threads="$OMP_NUM_THREADS"
+  if [[ -z $use_threads ]] ; then
+    ask_threads
+  else
+    message "Recovered setting 'OMP_NUM_THREADS=$use_threads'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_threads ; fi
+  fi
+  debug "use_threads=$use_threads"
+     
+  use_memory="$OMP_STACKSIZE"
+  if [[ -z $use_memory ]] ; then
+    ask_memory
+  else
+    message "Recovered setting 'OMP_STACKSIZE=$use_memory'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_memory ; fi
+  fi
+  debug "use_memory=$use_memory"
+
+  use_xtbhome="$XTBHOME"
+  use_xtbname="$xtb_callname"
+  if [[ -z $use_xtbhome || -z $use_xtbname ]] ; then
+    ask_installation_path
+  else
+    message "Recovered setting 'XTBHOME=$use_xtbhome' and"
+    message "recovered setting 'xtb_callname=$use_xtbname'."
+    ask "Would you like to change these settings?"
+    if read_boolean ; then ask_installation_path ; fi
+  fi
+  debug "use_xtbhome=$use_xtbhome; use_xtbname=$use_xtbname"
+
+  use_chatty="$stay_quiet"
+  if [[ -z $use_chatty ]] ; then
+    ask_chattyness
+  else
+    message "Recovered verbosity setting 'stay_quiet=$use_chatty'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_chattyness ; fi
+  fi
+  debug "use_chatty=$use_chatty"
+
+  use_outputfile_name="$output_file"
+  if [[ -z $use_outputfile_name ]] ; then
+    ask_files
+  else
+    message "Recovered default output setting 'output_file=$use_outputfile_name'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_files ; fi
+  fi
+  debug "use_outputfile_name=$use_outputfile_name"
+
+  use_interactivity="$run_interactive"
+  if [[ -z $use_interactivity ]] ; then
+    ask_interactivity
+  else
+    message "Recovered interactivity setting 'run_interactive=$use_interactivity'."
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_interactivity ; fi
+  fi
+  debug "use_interactivity=$use_interactivity"
+
+  use_queue="$request_qsys"
+  use_bsub_project="$bsub_project"
+  if [[ -z $use_queue ]] ; then
+    ask_qsys_details
+  else
+    message "Recovered queueing system setting 'request_qsys=$use_queue'."
+    if [[ ! -z $use_bsub_project ]] ; then 
+      message "Recovered project setting 'bsub_project=$bsub_project'."
+      ask "Would you like to change these settings?"
+    else
+      ask "Would you like to change this setting?"
+    fi
+    if read_boolean ; then ask_qsys_details ; fi
+  fi
+  debug "use_queue=$use_queue; use_bsub_project=$use_bsub_project"
+
+  use_module_system="$use_modules"
+  use_module_items=( "${load_modules[@]}" )
+  if [[ -z $use_modules ]] ; then
+    ask_modules
+  else
+    message "Recovered module setting 'use_modules=$use_module_system'."
+    if (( ${#use_module_items[@]} > 0 )) ; then
+      message "Recovered the use of the following modules:"
+      local module_index=0
+      while (( module_index < ${#use_module_items[@]} )) ; do
+        message "   load_modules[$module_index]=\"${use_module_items[$module_index]}\""
+        (( module_index++ ))
+      done
+    fi
+    ask "Would you like to change these settings?"
+    if read_boolean ; then ask_modules ; fi
+  fi
+  debug "use_module_system=$use_module_system"
+  debug "use_module_items=(${use_module_items[*]})"
+
+  use_walltime="$requested_walltime"
+  if [[ -z $use_walltime ]] ; then
+    ask_walltime
+  else
+    message "Recovered setting 'requested_walltime=$use_walltime'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_walltime ; fi
+  fi
+  debug "use_threads=$use_walltime"
+  
+  return 0
+}
+
+#
+# Input functions
+#
+
 read_human_input ()
 {
   debug "Reading human input."
@@ -169,10 +374,15 @@ read_integer ()
   echo "$readvar"
 }
 
+#
+# Configure functions
+#
+
 ask_installation_path ()
 {
   ask "Where is the xtb executable? Please specify the full path."
   use_xtbpath=$(read_human_input)
+  # Will be empty if skipped; can return without assigning/testing empty values
   [[ -z $use_xtbpath ]] && return
   debug "use_xtbpath=$use_xtbpath"
   use_xtbpath="$(expand_tilde "$use_xtbpath")"
@@ -223,7 +433,7 @@ ask_modules ()
   fi
 }
 
-ask_queueing_system ()
+ask_interactivity ()
 {
   ask "Would you like your standard operation to be interactive?"
   use_interactivity=$(read_yes_no)
@@ -235,6 +445,10 @@ ask_queueing_system ()
   fi
 
   ask "What queueing system would you like to use?"
+}
+
+ask_qsys_details ()
+{
   message "Currently supported: pbs-gen, bsub-gen, bsub-rwth"
   local test_queue
   test_queue=$(read_human_input)
@@ -261,7 +475,13 @@ ask_queueing_system ()
   debug "use_queue=$use_queue"
 }
 
-ask_environment_vars ()
+ask_queueing_system ()
+{
+  ask_interactivity 
+  ask_qsys_details
+}
+
+ask_threads ()
 {
   ask "How many threads do you want to use by default?"
   use_threads=$(read_integer)
@@ -270,7 +490,10 @@ ask_environment_vars ()
     unset use_threads
   fi
   debug "use_threads=$use_threads"
+}
 
+ask_memory ()
+{
   ask "How much memory (in MB) do you want to use by default?"
   use_memory=$(read_integer)
   if (( use_memory == 0 )) ; then
@@ -278,7 +501,10 @@ ask_environment_vars ()
     unset use_memory
   fi
   debug "use_memory=$use_memory"
+}
 
+ask_walltime ()
+{
   ask "How much walltime (in hours) do you want to use if submitted to a queueing system?"
   use_walltime=$(read_integer)
   if (( use_walltime == 0 )) ; then
@@ -288,6 +514,13 @@ ask_environment_vars ()
     use_walltime="$use_walltime:00:00"
   fi
   debug "use_walltime=$use_walltime"
+}
+
+ask_environment_vars ()
+{
+  ask_threads
+  ask_memory
+  ask_walltime
 }
 
 ask_chattyness ()
@@ -479,14 +712,16 @@ else
   exec 4> /dev/null 
 fi
 
+# Get to know where this script is located
+scriptpath="$(get_bindir "$0" "directory of configure script")"
+runxtbrc_path="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configuration file")"
+
 # Gather all information
-ask_all_settings
+recover_rc || ask_all_settings
 
 ask "Where do you want to store these settings?"
 message "Predefined location: $PWD/runxtb.rc"
-scriptpath="$(get_bindir "$0" "directory of configure script")"
-scriptpath="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configuration file")"
-message "Suggested location : $scriptpath/.runxtbrc"
+message "Suggested location : $runxtbrc_path/.runxtbrc"
 
 settings_filename=$(read_human_input)
 if [[ -z $settings_filename ]] ; then
