@@ -1,77 +1,80 @@
-## Example .runxtbrc
-#
-
 ## Set default processes (< number of available cores).
-#
+#  
    OMP_NUM_THREADS=4
    MKL_NUM_THREADS=4
-
+#  
+###
 ## Set default memory to be used in megabyte.
-#
-   OMP_STACKSIZE=1000
-
+#  
+   OMP_STACKSIZE=400
+#  
+###
 ## Set directory (not including the executable).
-#
+#  
 #  XTBHOME=/path/to/xtb
-#
+#  
 ## Set the name of the executable.
 ## (This should be xtb. Here set to xtb.dummy for testing.)
 #
-   xtb_callname="xtb.dummy"
+#  xtb_callname="xtb.dummy"
 #
 ## The above two lines combined should give the full path to the program, i.e.
 ## XTBHOME/xtb_callname
-
-## Set chattyness of runxtb.sh. 
+###
+## Set chattyness.
 ## (0: all; 1: no info; 2: no warnings; >2: nothing)
-#
+#  
    stay_quiet=0
-
+#  
+###
 ## Trap output of xtb in a file.
-## Uncomment the line below to always use the same filename, 
+## This will cause runxtb to always use the same filename, 
 ## which can be overwritten with the -o switch.
-#
-#  output_file="runxtb.out"
-#
 ## Always generate a file with the output of xtb, but generate this name
-## automagically derived from the input filename, arguments: 'auto' or '0'.
-#
-   output_file="auto"
-#
+## automagically, use arguments: 'auto' or '0'.
 ## This can be overwritten with an explicit empty argument to -c:
 ##   runxtb -c '' [other opts] <coord> [xtb options]
-
+#  
+#  output_file="runxtb.out"
+#  output_file="auto"
+#  
+###
 ## Set default mode, where interactive means that it is calculated immediately.
 ## (yes: interactive; no: write script; sub: write and submit)
-#
+#  
    run_interactive="yes"
-
-## Set default queueing system for which the script should be written.
-## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source code])
-#
-   request_qsys="bsub-rwth"
-
+#  
+###
+## Set default queueing system for which the script should be written
+## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source])
+#  
+   request_qsys="bsub-gen"
+#  
+###
 ## If project options are enabled (e.g. for bsub-rwth), 
 ## set to which it should be accounted.
 ## This can be overwritten with -P0 or -P default.
 #
-   bsub_project="default"
-
+#  bsub_project="default"
+#  
+###
 ## If modules are installed, their use can be enabled here.
 ## The default is setting the path, see above.
 #
    use_modules="true"
-   use_modules="false"
 #
-#  They need to be named, too. For example:
+#  Specified modules to be loaded:
 #
-#  load_modules[0]="CHEMISTRY"
-#  load_modules[1]="xtb"
-   load_modules[0]=""
-
-## Set Walltime for non-interactive mode
-#
-   requested_walltime="24:00:00"
-
-#
-## End of example .runxtbrc (2018-05-07)
+   load_modules[0]="CHEMISTRY"
+   load_modules[1]="xtb"
+#  
+###
+## Set Walltime for non-interactive mode.
+#  
+   requested_walltime="4:00:00"
+#  
+###
+#  
+## 
+###  Fri May  4 20:29:32 CEST 2018
+#### End of file. (Automatic configuration.)

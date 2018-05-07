@@ -80,12 +80,36 @@ display_howto ()
     exit 0
 }
 
+expand_tilde_path ()
+{
+  local test_string="$1" return_string
+  # Tilde does not expand like a variable, this might lead to files not being found
+  # The regex is trying to exclude special meanings of '~+' and '~-'
+  if [[ $test_string =~ ^~([^/+-]*)/(.*)$ ]] ; then
+    debug "Expandinging tilde, match: ${BASH_REMATCH[0]}"
+    if [[ -z ${BASH_REMATCH[1]} ]] ; then
+      # If the tilde is followed by a slash it expands to the users home
+      return_string="$HOME/${BASH_REMATCH[2]}"
+    else
+      # If the tilde is followed by a string, it expands to another user's home
+      return_string="/home/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+    debug "Expanded tilde to '$return_string'."
+  else
+    return_string="$test_string"
+  fi
+  echo "$return_string"
+}
+
 get_bindir ()
 {
-#  Taken from https://stackoverflow.com/a/246128/3180795
   local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
-  #  resolve $resolve_file until it is no longer a symlink
+
+  resolve_file=$(expand_tilde_path "$resolve_file")
+
+  # Taken in part from https://stackoverflow.com/a/246128/3180795
+  # resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
     link_target="$(readlink "$resolve_file")"
     if [[ $link_target == /* ]]; then
@@ -253,6 +277,7 @@ get_rc ()
     elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
       return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
     fi
   done
   debug "(returned) return_runxtbrc_loc=$return_runxtbrc_loc"
@@ -407,8 +432,8 @@ processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 #
 # Details about this script
 #
-version="0.1.1"
-versiondate="2018-05-03"
+version="0.1.2"
+versiondate="2018-05-07"
 
 #
 # Set some Defaults
@@ -540,6 +565,11 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
     #hlp   run_interactive="$run_interactive"
     #hlp   request_qsys="$request_qsys"
     #hlp   bsub_project="$bsub_project"
+    #hlp Platform information:
+    #hlp   nodename="$nodename"
+    #hlp   operatingsystem="$operatingsystem"
+    #hlp   architecture="$architecture"
+    #hlp   processortype="$processortype"
   esac
 done
 
@@ -584,6 +614,9 @@ debug "(current) use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
+debug "Platform: nodename=$nodename; operatingsystem=$operatingsystem"
+debug "(current) architecture=$architecture"
+debug "          processortype=$processortype"
 
 print_info
 
