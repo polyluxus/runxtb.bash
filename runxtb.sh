@@ -71,6 +71,16 @@ helpme ()
 
 display_howto ()
 {
+    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+      debug "Using modules."
+      # Loading the modules should take care of everything except threats
+      load_xtb_modules || fatal "Failed loading modules."
+    fi
+    debug "XTBHOME=$XTBHOME"
+    debug "$(ls -w70 -Am "$XTBHOME" 2>&1)"
+#   debug "         1         2         3         4         5         6         7         8"
+#   debug "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+
     [[ -e "$XTBHOME/HOWTO" ]] || fatal "Cannot find 'HOWTO' of xTB."
     if command -v less > /dev/null ; then
       less "$XTBHOME/HOWTO"
@@ -211,6 +221,22 @@ format_walltime_or_exit ()
 }
 
 # 
+# Load the modules
+#
+
+load_xtb_modules ()
+{
+  (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
+  if module load "${load_modules[*]}" &>> "$tmpfile" ; then
+    debug "Modules loaded successfully."
+  else
+    debug "Issues loading modules."
+    debug "$(cat "$tmpfile")"
+    return 1
+  fi
+}
+
+# 
 # Test and add to PATH
 #
 
@@ -220,12 +246,6 @@ check_program_or_exit ()
       message "Found programm '$1'."
       return 0
     else
-      if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-        message "Programm '$1' does not seem to exist or is not executable."
-        message "Will use modules instead."
-        unset XTBHOME
-        return 0
-      fi
       warning "Programm '$1' does not seem to exist or is not executable."
       warning "The script might not have been set up properly."
       fatal   "Cannot continue."
@@ -236,7 +256,8 @@ add_to_PATH ()
 {
     [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
     [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
-    [[ :$PATH: =~ :$1: ]] || PATH="$PATH:$1"
+    [[ :$PATH: =~ :$1: ]] || PATH="$1:$PATH"
+    debug "$PATH"
 }
 
 print_info ()
@@ -417,9 +438,17 @@ echo "$submitscript_filename"
 # Start main script
 #
 
-
 # Sent logging information to stdout
 exec 3>&1
+
+if [[ "$1" == "debug" ]] ; then
+  # Secret debugging switch
+  exec 4>&1
+  stay_quiet=0 
+  shift 
+else
+  exec 4> /dev/null
+fi
 
 #
 # Get some informations of the platform
@@ -429,11 +458,21 @@ operatingsystem=$(uname -o)
 architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
+# Find temporary directory for internal logs (or use null)
+if [[ ! -z $TMP ]] ; then
+  tmpfile="$TMP/runxtb.err"
+elif [[ ! -z $TEMP ]] ; then
+  tmpfile="$TEMP/runxtb.err"
+else 
+  tmpfile="/dev/null"
+fi
+debug "Writing errors to temporary file '$tmpfile'."
+
 #
 # Details about this script
 #
-version="0.1.2"
-versiondate="2018-05-07"
+version="0.1.3"
+versiondate="2018-05-18"
 
 #
 # Set some Defaults
@@ -454,15 +493,6 @@ declare -a load_modules
 #load_modules[1]="xtb"
 stay_quiet=0
 ignore_empty_commandline=false
-
-if [[ "$1" == "debug" ]] ; then
-  # Secret debugging switch
-  exec 4>&1
-  stay_quiet=0 
-  shift 
-else
-  exec 4> /dev/null
-fi
 
 scriptpath="$(get_bindir "$0" "Directory of runxtb")"
 runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "$PWD")"
@@ -593,18 +623,17 @@ fi
 warning "This is not the original xtb program!"
 warning "This is only a wrapper to set paths and variables."
 
+if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+  # Loading the modules should take care of everything except threats
+  load_xtb_modules || fatal "Failed loading modules."
+fi
+
 # If not set explicitly, assume xtb is in same directory as script
 [[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
 
 if check_program_or_exit "$XTBHOME/$xtb_callname" ; then
   add_to_PATH "$XTBHOME"
-  export XTBHOME PATH
-fi
-
-if [[ "$run_interactive" =~ [Yy][Ee][Ss] && "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-  (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
-  # Loading the modules should take care of everything except threats
-  module load "${load_modules[*]}" || fatal "Failed loading modules."
+# export XTBHOME PATH
 fi
 
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
@@ -662,6 +691,11 @@ elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
   fi
 else
   fatal "Unrecognised mode; abort."
+fi
+
+# Clean up
+if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
+  debug "$(rm -vf "$tmpfile")"
 fi
 
 message "Runxtb ($version, $versiondate) wrapper script completed."

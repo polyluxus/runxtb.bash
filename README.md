@@ -116,6 +116,8 @@ The following files come with this script:
  * `xtb.dummy` A tiny bash script only for testing. 
    This will only echo `<coord_file> [options]` verbatim.
  * `README.md` This file.
+ * `configure` A directury containing a script to configure the wrapper,
+   and some example setups.
 
 ## Exit status
 
@@ -136,4 +138,6 @@ For example:
 runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 ```
 
-(Martin, 2018/05/07)
+If you find anything not going as expected, please submit an issue on github.
+
+(Martin, 2018/05/18)

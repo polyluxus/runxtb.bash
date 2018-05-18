@@ -698,6 +698,25 @@ print_settings ()
   echo     "#### End of file. (Automatic configuration.)"
 }
 
+create_bin_link ()
+{
+    local link_target_path="$HOME/bin"
+    local link_target_name="runxtb"
+    local link_target="$link_target_path/$link_target_name"
+    
+    if [[ -e "$link_target" ]] ; then
+      debug "Link '$link_target' does already exist."
+    else
+      ask "Would you like to create a symbolic link '$link_target'?"
+      if read_boolean ; then
+        [[ -r "$link_target_path" ]] || fatal "Cannot read '$link_target_path'."
+        [[ -w "$link_target_path" ]] || fatal "Cannot write to '$link_target_path'."
+        [[ -x "$runxtbrc_path/runxtb.sh" ]] || fatal "Not executable: '$runxtbrc_path/runxtb.sh'."
+        message "$(ln -vs "$runxtbrc_path/runxtb.sh" "$link_target")"
+      fi
+    fi
+}
+
 #
 # Executes the options
 #
@@ -734,6 +753,9 @@ backup_if_exists "$settings_filename"
 
 print_settings > "$settings_filename"
 
-message "Written configuration to '$settings_filename'. Finished."
+message "Written configuration to '$settings_filename'."
 
+create_bin_link
+
+message "Finished."
 
