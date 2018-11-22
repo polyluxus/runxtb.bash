@@ -78,8 +78,19 @@ display_howto ()
     fi
     debug "XTBHOME=$XTBHOME"
     debug "$(ls -w70 -Am "$XTBHOME" 2>&1)"
+    debug "XTBPATH=$XTBPATH"
 #   debug "         1         2         3         4         5         6         7         8"
 #   debug "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+
+    warning "From version 6.0 onwards there is no HOWTO included."
+    message "Trying to display the man page instead."
+
+    if man xtb ; then
+      debug "Displaying man page was successful, exit now."
+      exit
+    else
+      debug "No manpage available. Try HOWTO."
+    fi
 
     [[ -e "$XTBHOME/HOWTO" ]] || fatal "Cannot find 'HOWTO' of xTB."
     if command -v less > /dev/null ; then
@@ -240,7 +251,7 @@ load_xtb_modules ()
 # Test and add to PATH
 #
 
-check_program_or_exit ()
+check_program ()
 {
     if [[ -f "$1" && -x "$1" ]] ; then
       message "Found programm '$1'."
@@ -248,7 +259,7 @@ check_program_or_exit ()
     else
       warning "Programm '$1' does not seem to exist or is not executable."
       warning "The script might not have been set up properly."
-      fatal   "Cannot continue."
+      return 1
     fi
 }    
 
@@ -260,12 +271,21 @@ add_to_PATH ()
     debug "$PATH"
 }
 
+add_to_MANPATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$MANPATH: =~ :$1: ]] || PATH="$1:$MANPATH"
+    debug "$PATH"
+}
+
 print_info ()
 {
     message "Setting OMP_NUM_THREADS=$OMP_NUM_THREADS."
     message "Setting MKL_NUM_THREADS=$MKL_NUM_THREADS."
     message "Setting OMP_STACKSIZE=$OMP_STACKSIZE."
     message "Setting XTBHOME=$XTBHOME."
+    message "Setting XTBPATH=$XTBPATH."
 }
 
 #
@@ -414,8 +434,13 @@ write_submit_script ()
 			EOF
     else
     	cat >&9 <<-EOF
-			export PATH="\$PATH:$XTBHOME"
-			export XTBHOME="$XTBHOME" 
+			export PATH="$XTBHOME:\$PATH"
+      # The following should actually work, but 
+      # due to an error (?) in the distribution, needs the above (Change in runxtb)
+			# export PATH="$XTBHOME/bin:$XTBHOME/scripts:\$PATH"
+      export XTBHOME="$XTBHOME" # Not necessary (or even used) if the above works
+			export XTBPATH="$XTBPATH" 
+			# Setting MANPATH is not necessary in scripted mode.
 			EOF
     fi
 
@@ -471,8 +496,8 @@ debug "Writing errors to temporary file '$tmpfile'."
 #
 # Details about this script
 #
-version="0.1.3"
-versiondate="2018-05-18"
+version="0.2.0_devel"
+versiondate="2018-11-XX"
 
 #
 # Set some Defaults
@@ -630,10 +655,20 @@ fi
 
 # If not set explicitly, assume xtb is in same directory as script
 [[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
+[[ -z $XTBPATH ]] && XTBPATH="$XTBHOME"
 
-if check_program_or_exit "$XTBHOME/$xtb_callname" ; then
+if check_program "$XTBHOME/$xtb_callname" ; then
+  # Theoretically this should be completely obsolete from version 6.0 onwards
+  # and instead the approach below should be used
   add_to_PATH "$XTBHOME"
-# export XTBHOME PATH
+  debug "Found program: $( command -v "$xtb_callname" )"
+else
+  message "Trying recommended approach for xtb 6.0"
+  add_to_PATH "$XTBHOME/bin"
+  add_to_PATH "$XTBHOME/scripts"
+  add_to_MANPATH "$XTBHOME/man"
+  debug "Found program: $( command -v "$xtb_callname" )"
+  check_program "$XTBHOME/bin/$xtb_callname" || fatal "Cannot continue"
 fi
 
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
