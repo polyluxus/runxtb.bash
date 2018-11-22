@@ -404,27 +404,30 @@ ask_modules ()
   if [[ "$use_module_system" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
     if ( command -v module &> /dev/null ) ; then
       debug "Command 'module' is available."
-      local module_index=0
-      while [[ -z ${use_module_items[$module_index]} ]] ; do
-        debug "Reading use_module_items[$module_index]"
-        ask "What modules do need to be loaded?"
-        use_module_items[$module_index]=$(read_human_input)
-        debug "use_module_items[$module_index]=${use_module_items[$module_index]}"
-        if [[ ${use_module_items[$module_index]} =~ ^[[:space:]]*$ ]] ; then 
-          debug "Finished reading modules."
-          unset 'use_module_items[module_index]'
-          break
-        fi
-        (( module_index++ ))
-      done
-      debug "Number of elements: ${#use_module_items[@]}"
-      if (( ${#use_module_items[@]} == 0 )) ; then
-        warning "No modules specified."
-        use_module_system="false"
-        warning "Switching the use of modules off."
+    else
+      warnung "Command 'module' appears not to be available; continue anyway."
+      # Something like this was included, but is not really necessary
+      # use_module_system="false"
+      # warning "Switching the use of modules off."
+    fi
+    # Unsetting read in module
+    unset use_module_items
+    local module_index=0
+    while [[ -z ${use_module_items[$module_index]} ]] ; do
+      debug "Reading use_module_items[$module_index]"
+      ask "What modules do need to be loaded?"
+      use_module_items[$module_index]=$(read_human_input)
+      debug "use_module_items[$module_index]=${use_module_items[$module_index]}"
+      if [[ ${use_module_items[$module_index]} =~ ^[[:space:]]*$ ]] ; then 
+        debug "Finished reading modules."
+        unset 'use_module_items[module_index]'
+        break
       fi
-    else 
-      warning "Command 'module' not found'."
+      (( module_index++ ))
+    done
+    debug "Number of elements: ${#use_module_items[@]}"
+    if (( ${#use_module_items[@]} == 0 )) ; then
+      warning "No modules specified."
       use_module_system="false"
       warning "Switching the use of modules off."
     fi
