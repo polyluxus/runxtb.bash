@@ -76,6 +76,11 @@ display_howto ()
       # Loading the modules should take care of everything except threats
       load_xtb_modules || fatal "Failed loading modules."
     fi
+    if [[ -z $XTBHOME ]] ; then
+      fatal "XTBHOME is unset."
+    else
+      add_to_MANPATH "$XTBHOME/man"
+    fi
     debug "XTBHOME=$XTBHOME"
     debug "$(ls -w70 -Am "$XTBHOME" 2>&1)"
     debug "XTBPATH=$XTBPATH"
