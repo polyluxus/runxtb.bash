@@ -1,9 +1,17 @@
+**Disclaimer:** 
+This is the development branch of the wrapper for the newer xtb 6.0. 
+It has not been tested and might not work at all;
+might also contain a lot of superfluous code.
+
+---
+
 # runxtb.bash
 
 This script provides a wrapper for the 
 extended tight-binding semi-empirical program package
 [xtb](https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb) 
-from Stefan Grimme's group at the University of Bonn.
+from Stefan Grimme's group at the University of Bonn
+(contact: xtb{at}thch.uni-bonn.de).
 
 It makes it unnecessary to set environment variables like 
 `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OMP_STACKSIZE`, and `XTBHOME` globally,
@@ -140,4 +148,4 @@ runxtb.sh debug -p1 -qq -s  dummy.xyz -opt -gfn
 
 If you find anything not going as expected, please submit an issue on github.
 
-(Martin, 2018/05/18)
+(Martin; 2018/11/XX; wrapper version 0.2.0_devel)
