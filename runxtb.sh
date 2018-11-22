@@ -243,6 +243,7 @@ format_walltime_or_exit ()
 load_xtb_modules ()
 {
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
+  ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
   if module load "${load_modules[*]}" &>> "$tmpfile" ; then
     debug "Modules loaded successfully."
   else
