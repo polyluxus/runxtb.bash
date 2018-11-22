@@ -434,8 +434,11 @@ write_submit_script ()
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
-			module load ${load_modules[*]} 2>&1
-			# Because otherwise it would go to the error output.
+      # Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
+			export MODULEPATH="$MODULEPATH"
+			module load ${load_modules[*]} 2>&1 || exit
+			# Redirect because otherwise it would go to the error output, which might be bad
+			# Exit on error
 			 
 			EOF
     else
