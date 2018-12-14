@@ -585,9 +585,14 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
     #hlp   -l <ARG> Specify a module to be used (work in progress). This will also invoke -M.
     #hlp            May be specified multiple times to create a list.
     #hlp            The modules need to be specified in the order they have to be loaded.
+    #hlp            If <ARG> is '0', then reset the list.
     #hlp            (Can also be set in the rc.)
     l) use_modules=true
-       load_modules[${#load_modules[*]}]="$OPTARG"
+       if [[ "$OPTARG" =~ [0]+ ]] ; then
+         unset load_modules
+       else
+         load_modules[${#load_modules[*]}]="$OPTARG"
+       fi
        ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
     i) run_interactive="yes"
