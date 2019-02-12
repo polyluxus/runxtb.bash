@@ -37,12 +37,13 @@ warning ()
 
 fatal ()
 {
+    exit_status=1
     if (( stay_quiet <= 2 )) ; then 
       echo "ERROR  : " "$*" >&2
     else
       debug "(error  ) " "$*"
     fi
-    exit 1
+    exit "$exit_status"
 }
 
 debug ()
@@ -71,23 +72,66 @@ helpme ()
 
 display_howto ()
 {
-    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-      debug "Using modules."
-      # Loading the modules should take care of everything except threats
-      load_xtb_modules || fatal "Failed loading modules."
-    fi
-    debug "XTBHOME=$XTBHOME"
-    debug "$(ls -w70 -Am "$XTBHOME" 2>&1)"
-#   debug "         1         2         3         4         5         6         7         8"
-#   debug "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
-
-    [[ -e "$XTBHOME/HOWTO" ]] || fatal "Cannot find 'HOWTO' of xTB."
-    if command -v less > /dev/null ; then
-      less "$XTBHOME/HOWTO"
+  local show_howto="${1:-xtb}"
+  if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+    debug "Using modules."
+    # Loading the modules should take care of everything except threads
+    load_xtb_modules || fatal "Failed loading modules."
+  else
+    debug "Using path settings."
+    # Assume if there is no special configuration applied which sets the install directory
+    # that the scriptdirectory is also the root directory of xtb
+    XTBPATH="${xtb_install_root:-$scriptpath}"
+  fi
+  # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
+  local xtb_manpath xtbpath_munge
+  # Since XTBPATH must be set, parse that first for the manpath
+  if [[ -n $XTBPATH ]] ; then
+    while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
+      [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
+      xtb_manpath="${BASH_REMATCH[1]}/man"
+      break
+    done
+  else
+    warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
+    warning "Please check your installation."
+  fi 
+  # If no man directory is found along path, fallback to XTBHOME
+  if [[ -z $xtb_manpath ]] ; then
+    # Assume if XTBHOME is set, it is the root directorry and contains the man directory
+    if [[ -n $XTBHOME ]] ; then
+      if [[ -d "$XTBHOME/man" ]] ; then
+        xtb_manpath="$XTBHOME/man"
+      else 
+        fatal "Manual directory '$XTBHOME/man' is missing."
+      fi
     else
-      cat "$XTBHOME/HOWTO"
+      fatal "The fallback environment variable 'XTBHOME' is unset."
     fi
+  else
+    # Add the found directory to the manpath
+    add_to_MANPATH "$xtb_manpath"
+  fi
+  debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
+
+  message "From version 6.0 onwards there is no HOWTO included, displaying man page instead."
+
+  debug "Showing manual for $show_howto."
+  if man "$show_howto" ; then
+    debug "Displaying man page was successful, exit now."
     exit 0
+  else
+    debug "No manpage available. Try fallback to HOWTO."
+  fi
+
+  [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
+  local less_cmd
+  if less_cmd="$( command -v less 2> /dev/null )" ; then
+    "$less_cmd" "$XTBHOME/HOWTO"
+  else
+    cat "$XTBHOME/HOWTO"
+  fi
+  exit 0
 }
 
 expand_tilde_path ()
@@ -113,22 +157,23 @@ expand_tilde_path ()
 
 get_bindir ()
 {
-  local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
+  # Resolves the absolute location of parameter and returns it
+  # partially taken from https://stackoverflow.com/a/246128/3180795
+  local resolve_file="$1" description="$2" 
+  local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
+  resolve_file=$( expand_tilde_path "$resolve_file" )
 
-  resolve_file=$(expand_tilde_path "$resolve_file")
-
-  # Taken in part from https://stackoverflow.com/a/246128/3180795
   # resolve $resolve_file until it is no longer a symlink
-  while [ -h "$resolve_file" ]; do 
-    link_target="$(readlink "$resolve_file")"
+  while [[ -h "$resolve_file" ]] ; do 
+    link_target="$( readlink "$resolve_file" )"
     if [[ $link_target == /* ]]; then
       debug "File '$resolve_file' is an absolute symlink to '$link_target'"
       resolve_file="$link_target"
     else
       directory_name="$( dirname "$resolve_file" )" 
       debug "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
-      #  If $SOURCE was a relative symlink, we need to resolve 
+      #  If $resolve_file was a relative symlink, we need to resolve 
       #+ it relative to the path where the symlink file was located
       resolve_file="$directory_name/$link_target"
     fi
@@ -136,7 +181,7 @@ get_bindir ()
   debug "File is '$resolve_file'" 
   resolve_dir_name="$( dirname "$resolve_file")"
   directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
-  if [ "$directory_name" != "$resolve_dir_name" ]; then
+  if [[ "$directory_name" != "$resolve_dir_name" ]] ; then
     debug "$description '$directory_name' resolves to '$directory_name'"
   fi
   debug "$description is '$directory_name'"
@@ -145,6 +190,27 @@ get_bindir ()
   else
     echo "$directory_name"
   fi
+}
+
+#
+# Clean up routine
+#
+
+cleanup_and_quit ()
+{
+  # Clean temporary files
+  if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
+    debug "$(rm -vf "$tmpfile")"
+  fi
+
+  # Say a nice 'Bye bye!'
+  message "Runxtb ($version, $versiondate) wrapper script completed."
+
+  # Close the messaging channel
+  exec 3>&-
+  
+  # Leave orderly
+  exit "$exit_status"
 }
 
 #
@@ -164,7 +230,7 @@ validate_integer ()
     fi
 }
 
-format_walltime_or_exit ()
+validate_walltime ()
 {
     local check_duration="$1"
     # Split time in HH:MM:SS
@@ -226,21 +292,34 @@ format_walltime_or_exit ()
 
 load_xtb_modules ()
 {
+  # Fail if there are no modules given (don't make any assumptions).
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
-  if module load "${load_modules[*]}" &>> "$tmpfile" ; then
-    debug "Modules loaded successfully."
-  else
-    debug "Issues loading modules."
-    debug "$(cat "$tmpfile")"
-    return 1
-  fi
+  # Fail if the module command is not available. 
+  ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
+  # Try to load the modules, but trap the output in the temporary file.
+  # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
+  module load "${load_modules[*]}" &>> "$tmpfile" || fatal "Failed to load modules."
+  # Remove colourcodes with sed:
+  # https://www.commandlinefu.com/commands/view/12043/remove-color-special-escape-ansi-codes-from-text-with-sed
+  sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
+  # Check whether then modules were loaded ok
+  local check_module
+  for check_module in "${load_modules[@]}" ; do
+    if grep -q -E "${check_module}.*[Oo][Kk]" "$tmpfile" ; then
+      debug "Module '${check_module}' loaded successfully."
+    else
+      debug "Issues loading module '${check_module}'."
+      debug "$(cat "$tmpfile")"
+      return 1
+    fi
+  done
 }
 
 # 
 # Test and add to PATH
 #
 
-check_program_or_exit ()
+check_program ()
 {
     if [[ -f "$1" && -x "$1" ]] ; then
       message "Found programm '$1'."
@@ -248,7 +327,7 @@ check_program_or_exit ()
     else
       warning "Programm '$1' does not seem to exist or is not executable."
       warning "The script might not have been set up properly."
-      fatal   "Cannot continue."
+      return 1
     fi
 }    
 
@@ -260,12 +339,20 @@ add_to_PATH ()
     debug "$PATH"
 }
 
+add_to_MANPATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$MANPATH: =~ :$1: ]] || PATH="$1:$MANPATH"
+    debug "$PATH"
+}
+
 print_info ()
 {
     message "Setting OMP_NUM_THREADS=$OMP_NUM_THREADS."
     message "Setting MKL_NUM_THREADS=$MKL_NUM_THREADS."
     message "Setting OMP_STACKSIZE=$OMP_STACKSIZE."
-    message "Setting XTBHOME=$XTBHOME."
+    message "Setting XTBPATH=$XTBPATH."
 }
 
 #
@@ -288,14 +375,14 @@ test_rc_file ()
 get_rc ()
 {
   local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
-  while [[ ! -z $1 ]] ; do
+  while [[ -n $1 ]] ; do
     test_runxtbrc_dir="$1"
     shift
-    if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
+    if test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/.runxtbrc" )" ; then
       return_runxtbrc_loc="$test_runxtbrc_loc" 
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
       continue
-    elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
+    elif test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/runxtb.rc" )" ; then 
       return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
       continue
@@ -361,7 +448,6 @@ write_submit_script ()
 			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
 			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
 			EOF
-    #elif [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
     elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
 			#BSUB -n $OMP_NUM_THREADS
@@ -376,7 +462,7 @@ write_submit_script ()
       # If 'bsub_project' is empty, or '0', or 'default' (in any case, truncated after def)
       # do not write this line to the script.
       if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
-        message "No project selected."
+        warning "No project selected."
       else
         echo "#BSUB -P $bsub_project" >&9
       fi
@@ -396,10 +482,10 @@ write_submit_script ()
 		echo "This is \$(uname -n)"
 		echo "OS \$(uname -p) (\$(uname -p))"
 		echo "Running on $OMP_NUM_THREADS \$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)."
-		echo "Calculation with xtb from $PWD."
+		echo "Calculation with $xtb_callname from $PWD."
 		echo "Working directry is $PWD"
 
-		cd "$PWD"
+		cd "$PWD" || exit 1
 		
 		EOF
 
@@ -408,25 +494,32 @@ write_submit_script ()
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
-			module load ${load_modules[*]} 2>&1
-			# Because otherwise it would go to the error output.
+      # Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
+			export MODULEPATH="$MODULEPATH"
+			module load ${load_modules[*]} 2>&1 || exit 1
+			# Redirect because otherwise it would go to the error output, which might be bad
+			# Exit on error, which it might not do given a specific implementation
 			 
 			EOF
     else
+      # Use path settings
     	cat >&9 <<-EOF
-			export PATH="\$PATH:$XTBHOME"
-			export XTBHOME="$XTBHOME" 
+			export PATH="$XTBPATH/bin:\$PATH"
+			export XTBPATH="$XTBPATH"
+			# Setting MANPATH is not necessary in scripted mode.
 			EOF
     fi
 
     cat >&9 <<-EOF
+		# Test the command
+		command -v "$xtb_callname" || exit 1
 		export OMP_NUM_THREADS="$OMP_NUM_THREADS"
 		export MKL_NUM_THREADS="$MKL_NUM_THREADS"
 		export OMP_STACKSIZE="${OMP_STACKSIZE}m"  
-		ulimit -s unlimited
+		ulimit -s unlimited || exit 1
 
 		date
-		$xtb_callname ${xtb_commands[@]} > "$output_file"
+		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
 		date
 		
 		EOF
@@ -451,7 +544,7 @@ else
 fi
 
 #
-# Get some informations of the platform
+# Get some information of the current platform
 #
 nodename=$(uname -n)
 operatingsystem=$(uname -o)
@@ -459,20 +552,20 @@ architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
 # Find temporary directory for internal logs (or use null)
-if [[ ! -z $TMP ]] ; then
-  tmpfile="$TMP/runxtb.err"
-elif [[ ! -z $TEMP ]] ; then
-  tmpfile="$TEMP/runxtb.err"
-else 
+if ! tmpfile="$( mktemp --tmpdir runxtb.err.XXXXXX 2> /dev/null )" ; then
+  warning "Failed creating temporary file for error logging."
   tmpfile="/dev/null"
 fi
 debug "Writing errors to temporary file '$tmpfile'."
 
+# Clean up in case of emergency
+trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
 #
 # Details about this script
 #
-version="0.1.3"
-versiondate="2018-05-18"
+version="0.2.0"
+versiondate="2019-02-12"
 
 #
 # Set some Defaults
@@ -494,96 +587,131 @@ declare -a load_modules
 stay_quiet=0
 ignore_empty_commandline=false
 
-scriptpath="$(get_bindir "$0" "Directory of runxtb")"
-runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "$PWD")"
+scriptpath="$( get_bindir "$0" "Directory of runxtb" )"
+runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD")"
 debug "runxtbrc_loc=$runxtbrc_loc"
 
-if [[ ! -z $runxtbrc_loc ]] ; then
+if [[ -n $runxtbrc_loc ]] ; then
   # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
   . "$runxtbrc_loc"
   message "Configuration file '$runxtbrc_loc' applied."
+else
+  debug "No configuration file found."
 fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
+while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
     #hlp   for the same options, only the last one will have an effect.
     #hlp 
     #hlp   -p <ARG> Set number of professors
-    p) validate_integer "$OPTARG"
-       OMP_NUM_THREADS="$OPTARG"
-       MKL_NUM_THREADS="$OPTARG"
-       ;;
+    p) 
+      validate_integer "$OPTARG"
+      OMP_NUM_THREADS="$OPTARG"
+      MKL_NUM_THREADS="$OPTARG"
+      ;;
     #hlp   -m <ARG> Set the number of memories (in megabyte)
-    m) validate_integer "$OPTARG"
-       OMP_STACKSIZE="${OPTARG}"
-       ;;
+    m)
+      validate_integer "$OPTARG"
+      OMP_STACKSIZE="${OPTARG}"
+      ;;
     #hlp   -w <ARG> Set the walltime when sent to the queue
-    w) requested_walltime=$(format_walltime_or_exit "$OPTARG")
-       ;;
+    w)
+      requested_walltime=$( validate_walltime "$OPTARG" )
+      ;;
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
-    o) output_file="$OPTARG"
-       ;;
+    #hlp            For the values '', '0', 'auto' the script will guess.
+    #hlp            Use 'stdout', '-' to send output to standard out.
+    o) 
+      output_file="$OPTARG"
+      ;;
     #hlp   -s       Write submitscript (instead of interactive execution)
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    s) run_interactive="no"
-       ;;
+    s) 
+      run_interactive="no"
+      ;;
     #hlp   -S       Write submitscript and submit it to the queue.
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    S) run_interactive="sub"
-       ;;
+    S) 
+      run_interactive="sub"
+      ;;
     #hlp   -Q <ARG> Select queueing system (pbs-gen, bsub-rwth)
-    Q) request_qsys="$OPTARG"
-       ;;
+    Q)
+      request_qsys="$OPTARG"
+      ;;
     #hlp   -P <ARG> Account to project <ARG>.
     #hlp            This will automatically set '-Q bsub-rwth', too.
     #hlp            (It will not trigger remote execution.)
-    P) bsub_project="$OPTARG"
-       request_qsys="bsub-rwth"
-       ;;
+    P) 
+      bsub_project="$OPTARG"
+      request_qsys="bsub-rwth"
+      ;;
     #hlp   -M       Use modules instead of paths (work in progress).
     #hlp            Needs a specified modules list (set in rc).
-    M) use_modules=true
-       ;;
+    M)
+      use_modules="true"
+      ;;
     #hlp   -l <ARG> Specify a module to be used (work in progress). This will also invoke -M.
     #hlp            May be specified multiple times to create a list.
     #hlp            The modules need to be specified in the order they have to be loaded.
+    #hlp            If <ARG> is '0', then reset the list.
     #hlp            (Can also be set in the rc.)
-    l) use_modules=true
-       load_modules[${#load_modules[*]}]="$OPTARG"
-       ;;
+    l)
+      use_modules="true"
+      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]+(.*)$ ]] ; then
+        unset load_modules
+        [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
+      else
+        load_modules+=( "$OPTARG" )
+      fi
+      ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
-    i) run_interactive="yes"
-       ;;
-    #hlp   -B <ARG> Set absolute path to xtb to <ARG>.
-    B) XTBHOME="$(get_bindir "$OPTARG" "XTBHOME")"
-       xtb_callname="${OPTARG##*/}"
-       ;;
+    i) 
+      run_interactive="yes"
+      ;;
+    #hlp   -B <ARG> Set absolute path to the xtb executable to <ARG>.
+    #hlp            This will also set the callname and ignore an empty commandline.
+    #hlp            Assumed format for <ARG>: ./relative/or/absolute/path/to/XTBHOME/bin/'callname'
+    B) 
+      xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )"
+      xtb_callname="${OPTARG##*/}"
+      ;;
     #hlp   -C <ARG> Change the callname of the script.
     #hlp            This can be useful to request a different executable from the package.
     #hlp            No warning will be issued if the command line is empty.
-    C) xtb_callname="$OPTARG"
-       ignore_empty_commandline="true"
-       ;;
+    C) 
+      xtb_callname="$OPTARG"
+      ignore_empty_commandline="true"
+      ;;
     #hlp   -q       Stay quiet! (Only this startup script)
     #hlp            May be specified multiple times to be more forceful.
-    q) (( stay_quiet++ )) 
-       ;;
+    q) 
+      (( stay_quiet++ )) 
+      ;;
     #hlp   -h       Prints this help text
-    h) helpme ;;
-
-    #hlp   -H       Displays the HOWTO file from the xtb distribution
-    H) display_howto ;;
-
-   \?) fatal "Invalid option: -$OPTARG." ;;
-
-    :) fatal "Option -$OPTARG requires an argument." ;;
+    h) 
+      helpme 
+      ;;
+    #hlp   -H       Displays the man page of xtb of the installation.
+    H) 
+      display_howto "xtb"
+      ;;
+    #hlp   -X       Displays the man page of xcontrol of the installation.
+    X) 
+      display_howto "xcontrol"
+      ;;
+    \?) 
+      fatal "Invalid option: -$OPTARG." 
+      ;;
+    :) 
+      fatal "Option -$OPTARG requires an argument." 
+      ;;
 
     #hlp Current settings:
-    #hlp   XTBHOME="$XTBHOME" 
+    #hlp   xtb_install_root="$xtb_install_root" (will set XTBPATH)
     #hlp   xtb_callname="$xtb_callname"
     #hlp   use_modules="$use_modules" 
     #hlp   load_modules=("${load_modules[*]}")
@@ -606,12 +734,16 @@ done
 shift $(( OPTIND - 1 ))
 
 # Assume jobname from name of coordinate file, cut xyz (if exists)
-jobname="${1%.xyz}"
-debug "Guessed jobname is '$jobname'."
+if [[ -r $1 ]] ; then
+  jobname="${1%.xyz}"
+  debug "Guessed jobname is '$jobname'."
+else
+  jobname="${PWD##*/}"
+fi
 
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
-debug "Commands for xtb are '${xtb_commands[*]}'."
+debug "Commands for ${xtb_callname} are '${xtb_commands[*]}'."
 
 if [[ "$ignore_empty_commandline" =~ [Ff][Aa][Ll][Ss][Ee] ]] ; then
   (( ${#xtb_commands[*]} == 0 )) && warning "There are no commands to pass on to xtb."
@@ -620,26 +752,36 @@ else
 fi
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
-warning "This is not the original xtb program!"
-warning "This is only a wrapper to set paths and variables."
+message "This is not the original xtb program!"
+message "This is only a wrapper to set paths and variables."
 
 if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+  debug "Using modules."
   # Loading the modules should take care of everything except threats
   load_xtb_modules || fatal "Failed loading modules."
+else
+  debug "Using path settings."
+  # Assume if there is no special configuration applied which sets the install directory
+  # that the scriptdirectory is also the root directory of xtb
+  XTBPATH="${xtb_install_root:-$scriptpath}"
+  if [[ -d "${XTBPATH}/bin" ]] ; then
+    add_to_PATH "${XTBPATH}/bin"
+  else
+    fatal "Cannot locate bin directory in '$XTBPATH'."
+  fi
+  # Add the manual path, even though we won't need it
+  [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
+  export XTBPATH PATH MANPATH
 fi
 
-# If not set explicitly, assume xtb is in same directory as script
-[[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
-
-if check_program_or_exit "$XTBHOME/$xtb_callname" ; then
-  add_to_PATH "$XTBHOME"
-# export XTBHOME PATH
-fi
+# Check whether we have the right executable
+debug "$xtb_callname is '$( command -v "$xtb_callname")'" || fatal "Command not found: $xtb_callname"
 
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
-debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
-debug "(current) use_modules=$use_modules load_modules=(${load_modules[*]})"
+debug "Settings: xtb_install_root=$xtb_install_root (= XTBPATH)"
+debug "(current) xtb_callname=$xtb_callname"
+debug "          use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
@@ -649,13 +791,17 @@ debug "          processortype=$processortype"
 
 print_info
 
+# Create a filename for the output (jobname cannot be empty, output_file may not be empty)
+[[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.runxtb.out"
+debug "Output goes to: $output_file"
+
 if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   [[ -z $request_qsys ]] && fatal "No queueing system specified."
-  [[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
   submitscript=$(write_submit_script "$request_qsys" "$output_file")
+  debug "Created '$submitscript'."
+
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
-    debug "Created '$submitscript'."
     if [[ $request_qsys =~ [Pp][Bb][Ss] ]] ; then
       submit_id="Submitted as $(qsub "$submitscript")" || exit_status="$?"
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
@@ -674,31 +820,19 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
-  if [[ -z $output_file ]] ; then 
-    $xtb_callname "${xtb_commands[@]}" 
-    exit_status="$?" # Carry over exit status
-  elif [[ "$output_file" =~ ^(0|[Aa][Uu][Tt][Oo])$ ]] ; then
-    # Enables automatic generation of output-filename in 'interactive' mode
-    output_file="$jobname.runxtb.out"
-    message "Will write xtb output to '$output_file'."
-    backup_if_exists "$output_file"
-    $xtb_callname "${xtb_commands[@]}" > "$output_file"
+  if [[ $output_file  =~ (-|[Ss][Tt][Dd][Oo][Uu][Tt]) ]] ; then 
+    "$xtb_callname" "${xtb_commands[@]}" 
     exit_status="$?" # Carry over exit status
   else
+    message "Will write xtb output to '$output_file'."
     backup_if_exists "$output_file"
-    $xtb_callname "${xtb_commands[@]}" > "$output_file"
+    "$xtb_callname" "${xtb_commands[@]}" > "$output_file"
     exit_status="$?" # Carry over exit status
   fi
 else
-  fatal "Unrecognised mode; abort."
+  fatal "Unrecognised mode '$run_interactive'; abort."
 fi
 
-# Clean up
-if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
-  debug "$(rm -vf "$tmpfile")"
-fi
-
-message "Runxtb ($version, $versiondate) wrapper script completed."
-exec 3>&-
+#cleanup_and_quit
 #hlp ===== End of Script ===== (Martin, $version, $versiondate)
-exit $exit_status
+

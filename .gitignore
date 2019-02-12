@@ -4,3 +4,6 @@ water.*
 dummy.*
 examples/
 test/
+**/tmp.*
+**/*.tmp
+**/*.swp

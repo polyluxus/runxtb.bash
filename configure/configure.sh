@@ -151,7 +151,7 @@ recover_rc ()
 {
   local runxtbrc_loc
   # Guess some locations where a rc file could be located
-  runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "$PWD")"
+  runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "/home/$USER/.config/" "$PWD")"
   debug "runxtbrc_loc=$runxtbrc_loc"
   
   if [[ ! -z $runxtbrc_loc ]] ; then
@@ -213,12 +213,12 @@ recover_rc ()
   fi
   debug "use_memory=$use_memory"
 
-  use_xtbhome="$XTBHOME"
+  use_xtbhome="$xtb_install_root"
   use_xtbname="$xtb_callname"
   if [[ -z $use_xtbhome || -z $use_xtbname ]] ; then
     ask_installation_path
   else
-    message "Recovered setting 'XTBHOME=$use_xtbhome' and"
+    message "Recovered setting 'xtb_install_root=$use_xtbhome' and"
     message "recovered setting 'xtb_callname=$use_xtbname'."
     ask "Would you like to change these settings?"
     if read_boolean ; then ask_installation_path ; fi
@@ -387,7 +387,8 @@ ask_installation_path ()
   debug "use_xtbpath=$use_xtbpath"
   use_xtbpath="$(expand_tilde "$use_xtbpath")"
   if check_exist_executable "$use_xtbpath" ; then
-    use_xtbhome=$(get_bindir "$use_xtbpath" "XTBHOME") && use_xtbname=${use_xtbpath##*/}
+    use_xtbhome=$(get_bindir "$use_xtbpath" "XTB bin directory") && use_xtbname=${use_xtbpath##*/}
+    use_xtbhome="${use_xtbhome%/bin}"
   else
     warning "Problem locating executable, unsetting variable."
     unset use_xtbpath use_xtbhome
@@ -404,27 +405,30 @@ ask_modules ()
   if [[ "$use_module_system" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
     if ( command -v module &> /dev/null ) ; then
       debug "Command 'module' is available."
-      local module_index=0
-      while [[ -z ${use_module_items[$module_index]} ]] ; do
-        debug "Reading use_module_items[$module_index]"
-        ask "What modules do need to be loaded?"
-        use_module_items[$module_index]=$(read_human_input)
-        debug "use_module_items[$module_index]=${use_module_items[$module_index]}"
-        if [[ ${use_module_items[$module_index]} =~ ^[[:space:]]*$ ]] ; then 
-          debug "Finished reading modules."
-          unset 'use_module_items[module_index]'
-          break
-        fi
-        (( module_index++ ))
-      done
-      debug "Number of elements: ${#use_module_items[@]}"
-      if (( ${#use_module_items[@]} == 0 )) ; then
-        warning "No modules specified."
-        use_module_system="false"
-        warning "Switching the use of modules off."
+    else
+      warnung "Command 'module' appears not to be available; continue anyway."
+      # Something like this was included, but is not really necessary
+      # use_module_system="false"
+      # warning "Switching the use of modules off."
+    fi
+    # Unsetting read in module
+    unset use_module_items
+    local module_index=0
+    while [[ -z ${use_module_items[$module_index]} ]] ; do
+      debug "Reading use_module_items[$module_index]"
+      ask "What modules do need to be loaded?"
+      use_module_items[$module_index]=$(read_human_input)
+      debug "use_module_items[$module_index]=${use_module_items[$module_index]}"
+      if [[ ${use_module_items[$module_index]} =~ ^[[:space:]]*$ ]] ; then 
+        debug "Finished reading modules."
+        unset 'use_module_items[module_index]'
+        break
       fi
-    else 
-      warning "Command 'module' not found'."
+      (( module_index++ ))
+    done
+    debug "Number of elements: ${#use_module_items[@]}"
+    if (( ${#use_module_items[@]} == 0 )) ; then
+      warning "No modules specified."
       use_module_system="false"
       warning "Switching the use of modules off."
     fi
@@ -576,9 +580,9 @@ print_settings ()
   echo     "## Set directory (not including the executable)."
   echo     "#  "
   if [[ -z $use_xtbhome ]] ; then
-    echo   "#  XTBHOME=/path/to/xtb"
+    echo   "#  xtb_install_root=/path/to/xtbhome"
   else
-    echo   "   XTBHOME=\"$use_xtbhome\""
+    echo   "   xtb_install_root=\"$use_xtbhome\""
   fi
   echo     "#  "
   echo     "## Set the name of the executable."
