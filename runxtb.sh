@@ -37,12 +37,13 @@ warning ()
 
 fatal ()
 {
+    exit_status=1
     if (( stay_quiet <= 2 )) ; then 
       echo "ERROR  : " "$*" >&2
     else
       debug "(error  ) " "$*"
     fi
-    exit 1
+    exit "$exit_status"
 }
 
 debug ()
@@ -209,7 +210,7 @@ cleanup_and_quit ()
   exec 3>&-
   
   # Leave orderly
-  exit $exit_status
+  exit "$exit_status"
 }
 
 #
@@ -558,13 +559,13 @@ fi
 debug "Writing errors to temporary file '$tmpfile'."
 
 # Clean up in case of emergency
-trap cleanup_and_quit EXIT SIGTERM
+trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
 #
 # Details about this script
 #
-version="0.2.0_devel"
-versiondate="2018-11-XX"
+version="0.2.0"
+versiondate="2019-02-12"
 
 #
 # Set some Defaults
@@ -832,6 +833,6 @@ else
   fatal "Unrecognised mode '$run_interactive'; abort."
 fi
 
-cleanup_and_quit
+#cleanup_and_quit
 #hlp ===== End of Script ===== (Martin, $version, $versiondate)
 
