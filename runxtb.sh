@@ -665,12 +665,16 @@ done
 shift $(( OPTIND - 1 ))
 
 # Assume jobname from name of coordinate file, cut xyz (if exists)
-jobname="${1%.xyz}"
-debug "Guessed jobname is '$jobname'."
+if [[ -r $1 ]] ; then
+  jobname="${1%.xyz}"
+  debug "Guessed jobname is '$jobname'."
+else
+  jobname="${PWD##*/}"
+fi
 
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
-debug "Commands for xtb are '${xtb_commands[*]}'."
+debug "Commands for ${xtb_callname} are '${xtb_commands[*]}'."
 
 if [[ "$ignore_empty_commandline" =~ [Ff][Aa][Ll][Ss][Ee] ]] ; then
   (( ${#xtb_commands[*]} == 0 )) && warning "There are no commands to pass on to xtb."
