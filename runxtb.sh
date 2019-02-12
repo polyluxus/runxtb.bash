@@ -447,7 +447,6 @@ write_submit_script ()
 			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
 			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
 			EOF
-    #elif [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
     elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
 			#BSUB -n $OMP_NUM_THREADS
@@ -462,7 +461,7 @@ write_submit_script ()
       # If 'bsub_project' is empty, or '0', or 'default' (in any case, truncated after def)
       # do not write this line to the script.
       if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
-        message "No project selected."
+        warning "No project selected."
       else
         echo "#BSUB -P $bsub_project" >&9
       fi
@@ -482,10 +481,10 @@ write_submit_script ()
 		echo "This is \$(uname -n)"
 		echo "OS \$(uname -p) (\$(uname -p))"
 		echo "Running on $OMP_NUM_THREADS \$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)."
-		echo "Calculation with xtb from $PWD."
+		echo "Calculation with $xtb_callname from $PWD."
 		echo "Working directry is $PWD"
 
-		cd "$PWD"
+		cd "$PWD" || exit 1
 		
 		EOF
 
@@ -496,31 +495,30 @@ write_submit_script ()
 			# Loading the modules should take care of everything except threads
       # Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
-			module load ${load_modules[*]} 2>&1 || exit
+			module load ${load_modules[*]} 2>&1 || exit 1
 			# Redirect because otherwise it would go to the error output, which might be bad
-			# Exit on error
+			# Exit on error, which it might not do given a specific implementation
 			 
 			EOF
     else
+      # Use path settings
     	cat >&9 <<-EOF
-			export PATH="$XTBHOME:\$PATH"
-      # The following should actually work, but 
-      # due to an error (?) in the distribution, needs the above (Change in runxtb)
-			# export PATH="$XTBHOME/bin:$XTBHOME/scripts:\$PATH"
-      export XTBHOME="$XTBHOME" # Not necessary (or even used) if the above works
-			export XTBPATH="$XTBPATH" 
+			export PATH="$XTBPATH/bin:\$PATH"
+			export XTBPATH="$XTBPATH"
 			# Setting MANPATH is not necessary in scripted mode.
 			EOF
     fi
 
     cat >&9 <<-EOF
+		# Test the command
+		command -v "$xtb_callname" || exit 1
 		export OMP_NUM_THREADS="$OMP_NUM_THREADS"
 		export MKL_NUM_THREADS="$MKL_NUM_THREADS"
 		export OMP_STACKSIZE="${OMP_STACKSIZE}m"  
-		ulimit -s unlimited
+		ulimit -s unlimited || exit 1
 
 		date
-		$xtb_callname ${xtb_commands[@]} > "$output_file"
+		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
 		date
 		
 		EOF
