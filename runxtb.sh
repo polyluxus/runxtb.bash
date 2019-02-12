@@ -493,11 +493,8 @@ architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
 # Find temporary directory for internal logs (or use null)
-if [[ ! -z $TMP ]] ; then
-  tmpfile="$TMP/runxtb.err"
-elif [[ ! -z $TEMP ]] ; then
-  tmpfile="$TEMP/runxtb.err"
-else 
+if ! tmpfile="$( mktemp --tmpdir runxtb.err.XXXXXX 2> /dev/null )" ; then
+  warning "Failed creating temporary file for error logging."
   tmpfile="/dev/null"
 fi
 debug "Writing errors to temporary file '$tmpfile'."
