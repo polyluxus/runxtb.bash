@@ -243,15 +243,27 @@ validate_walltime ()
 
 load_xtb_modules ()
 {
+  # Fail if there are no modules given (don't make any assumptions).
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
+  # Fail if the module command is not available. 
   ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
-  if module load "${load_modules[*]}" &>> "$tmpfile" ; then
-    debug "Modules loaded successfully."
-  else
-    debug "Issues loading modules."
-    debug "$(cat "$tmpfile")"
-    return 1
-  fi
+  # Try to load the modules, but trap the output in the temporary file.
+  # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
+  module load "${load_modules[*]}" &>> "$tmpfile" || fatal "Failed to load modules."
+  # Remove colourcodes with sed:
+  # https://www.commandlinefu.com/commands/view/12043/remove-color-special-escape-ansi-codes-from-text-with-sed
+  sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
+  # Check whether then modules were loaded ok
+  local check_module
+  for check_module in "${load_modules[*]}" ; do
+    if grep -q -E "${check_module}.*[Oo][Kk]" "$tmpfile" ; then
+      debug "Module '${check_module}' loaded successfully."
+    else
+      debug "Issues loading module '${check_module}'."
+      debug "$(cat "$tmpfile")"
+      return 1
+    fi
+  done
 }
 
 # 
@@ -683,11 +695,11 @@ else
 fi
 
 # Before proceeding, print a warning, that this is  N O T  the real program.
-warning "This is not the original xtb program!"
-warning "This is only a wrapper to set paths and variables."
+message "This is not the original xtb program!"
+message "This is only a wrapper to set paths and variables."
 
 if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-  # Loading the modules should take care of everything except threats
+  # Loading the modules should take care of everything except threads
   load_xtb_modules || fatal "Failed loading modules."
 fi
 
