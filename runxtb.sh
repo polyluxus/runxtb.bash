@@ -181,7 +181,7 @@ validate_integer ()
     fi
 }
 
-format_walltime_or_exit ()
+validate_walltime ()
 {
     local check_duration="$1"
     # Split time in HH:MM:SS
@@ -547,79 +547,99 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
     #hlp   for the same options, only the last one will have an effect.
     #hlp 
     #hlp   -p <ARG> Set number of professors
-    p) validate_integer "$OPTARG"
-       OMP_NUM_THREADS="$OPTARG"
-       MKL_NUM_THREADS="$OPTARG"
-       ;;
+    p) 
+      validate_integer "$OPTARG"
+      OMP_NUM_THREADS="$OPTARG"
+      MKL_NUM_THREADS="$OPTARG"
+      ;;
     #hlp   -m <ARG> Set the number of memories (in megabyte)
-    m) validate_integer "$OPTARG"
-       OMP_STACKSIZE="${OPTARG}"
-       ;;
+    m)
+      validate_integer "$OPTARG"
+      OMP_STACKSIZE="${OPTARG}"
+      ;;
     #hlp   -w <ARG> Set the walltime when sent to the queue
-    w) requested_walltime=$(format_walltime_or_exit "$OPTARG")
-       ;;
+    w)
+      requested_walltime=$( validate_walltime "$OPTARG" )
+      ;;
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
-    o) output_file="$OPTARG"
-       ;;
+    o) 
+      output_file="$OPTARG"
+      ;;
     #hlp   -s       Write submitscript (instead of interactive execution)
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    s) run_interactive="no"
-       ;;
+    s) 
+      run_interactive="no"
+      ;;
     #hlp   -S       Write submitscript and submit it to the queue.
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    S) run_interactive="sub"
-       ;;
+    S) 
+      run_interactive="sub"
+      ;;
     #hlp   -Q <ARG> Select queueing system (pbs-gen, bsub-rwth)
-    Q) request_qsys="$OPTARG"
-       ;;
+    Q)
+      request_qsys="$OPTARG"
+      ;;
     #hlp   -P <ARG> Account to project <ARG>.
     #hlp            This will automatically set '-Q bsub-rwth', too.
     #hlp            (It will not trigger remote execution.)
-    P) bsub_project="$OPTARG"
-       request_qsys="bsub-rwth"
-       ;;
+    P) 
+      bsub_project="$OPTARG"
+      request_qsys="bsub-rwth"
+      ;;
     #hlp   -M       Use modules instead of paths (work in progress).
     #hlp            Needs a specified modules list (set in rc).
-    M) use_modules=true
-       ;;
+    M)
+      use_modules="true"
+      ;;
     #hlp   -l <ARG> Specify a module to be used (work in progress). This will also invoke -M.
     #hlp            May be specified multiple times to create a list.
     #hlp            The modules need to be specified in the order they have to be loaded.
     #hlp            If <ARG> is '0', then reset the list.
     #hlp            (Can also be set in the rc.)
-    l) use_modules=true
-       if [[ "$OPTARG" =~ [0]+ ]] ; then
-         unset load_modules
-       else
-         load_modules[${#load_modules[*]}]="$OPTARG"
-       fi
-       ;;
+    l)
+      use_modules="true"
+      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]+(.*)$ ]] ; then
+        unset load_modules
+        [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
+      else
+        load_modules+=( "$OPTARG" )
+      fi
+      ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
-    i) run_interactive="yes"
-       ;;
+    i) 
+      run_interactive="yes"
+      ;;
     #hlp   -B <ARG> Set absolute path to xtb to <ARG>.
-    B) XTBHOME="$(get_bindir "$OPTARG" "XTBHOME")"
-       xtb_callname="${OPTARG##*/}"
-       ;;
+    B) 
+      XTBHOME="$( get_bindir "$OPTARG" "XTBHOME" )"
+      xtb_callname="${OPTARG##*/}"
+      ;;
     #hlp   -C <ARG> Change the callname of the script.
     #hlp            This can be useful to request a different executable from the package.
     #hlp            No warning will be issued if the command line is empty.
-    C) xtb_callname="$OPTARG"
-       ignore_empty_commandline="true"
-       ;;
+    C) 
+      xtb_callname="$OPTARG"
+      ignore_empty_commandline="true"
+      ;;
     #hlp   -q       Stay quiet! (Only this startup script)
     #hlp            May be specified multiple times to be more forceful.
-    q) (( stay_quiet++ )) 
-       ;;
+    q) 
+      (( stay_quiet++ )) 
+      ;;
     #hlp   -h       Prints this help text
-    h) helpme ;;
-
+    h) 
+      helpme 
+      ;;
     #hlp   -H       Displays the HOWTO file from the xtb distribution
-    H) display_howto ;;
-
-   \?) fatal "Invalid option: -$OPTARG." ;;
-
-    :) fatal "Option -$OPTARG requires an argument." ;;
+    H) 
+      display_howto 
+      ;;
+    \?) 
+      fatal "Invalid option: -$OPTARG." 
+      ;;
+    :) 
+      fatal "Option -$OPTARG requires an argument." 
+      ;;
 
     #hlp Current settings:
     #hlp   XTBHOME="$XTBHOME" 
