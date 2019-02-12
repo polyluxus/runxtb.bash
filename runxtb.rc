@@ -10,17 +10,17 @@
 #
    OMP_STACKSIZE=1000
 
-## Set directory (not including the executable).
+## Set installation directory (not including the executable).
 #
-#  XTBHOME=/path/to/xtb
+#  xtb_install_root="/path/to/xtb"
 #
 ## Set the name of the executable.
 ## (This should be xtb. Here set to xtb.dummy for testing.)
 #
    xtb_callname="xtb.dummy"
 #
-## The above two lines combined should give the full path to the program, i.e.
-## XTBHOME/xtb_callname
+## The above two lines combined and inserting /bin/ should give the full path to the program, i.e.
+## /path/to/XTBHOME/bin/xtb_callname
 
 ## Set chattyness of runxtb.sh. 
 ## (0: all; 1: no info; 2: no warnings; >2: nothing)
@@ -34,12 +34,13 @@
 #  output_file="runxtb.out"
 #
 ## Always generate a file with the output of xtb, but generate this name
-## automagically derived from the input filename, arguments: 'auto' or '0'.
+## automagically derived from the input filename, arguments: '', 'auto', or '0'.
+## Sent to standard output, arguments: 'stdout', '-'
 #
    output_file="auto"
 #
-## This can be overwritten with an explicit empty argument to -c:
-##   runxtb -c '' [other opts] <coord> [xtb options]
+## This can be overwritten with an explicit empty argument to -o:
+##   runxtb -o '' [other opts] <coord> [xtb options]
 
 ## Set default mode, where interactive means that it is calculated immediately.
 ## (yes: interactive; no: write script; sub: write and submit)
@@ -60,18 +61,17 @@
 ## If modules are installed, their use can be enabled here.
 ## The default is setting the path, see above.
 #
-   use_modules="true"
+#  use_modules="true"
    use_modules="false"
 #
 #  They need to be named, too. For example:
 #
 #  load_modules[0]="CHEMISTRY"
 #  load_modules[1]="xtb"
-   load_modules[0]=""
 
 ## Set Walltime for non-interactive mode
 #
    requested_walltime="24:00:00"
 
 #
-## End of example .runxtbrc (2018-05-07)
+## End of example .runxtbrc (2019-02-12)

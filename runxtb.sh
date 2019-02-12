@@ -74,14 +74,13 @@ display_howto ()
   local show_howto="${1:-xtb}"
   if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
     debug "Using modules."
-    # Loading the modules should take care of everything except threats
+    # Loading the modules should take care of everything except threads
     load_xtb_modules || fatal "Failed loading modules."
   else
     debug "Using path settings."
     # Assume if there is no special configuration applied which sets the install directory
     # that the scriptdirectory is also the root directory of xtb
-    [[ -z $xtb_install_root ]] && xtb_install_root="$scriptpath"
-    XTBPATH="$xtb_install_root"
+    XTBPATH="${xtb_install_root:-$scriptpath}"
   fi
   # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
   local xtb_manpath xtbpath_munge
@@ -190,6 +189,27 @@ get_bindir ()
   else
     echo "$directory_name"
   fi
+}
+
+#
+# Clean up routine
+#
+
+cleanup_and_quit ()
+{
+  # Clean temporary files
+  if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
+    debug "$(rm -vf "$tmpfile")"
+  fi
+
+  # Say a nice 'Bye bye!'
+  message "Runxtb ($version, $versiondate) wrapper script completed."
+
+  # Close the messaging channel
+  exec 3>&-
+  
+  # Leave orderly
+  exit $exit_status
 }
 
 #
@@ -331,7 +351,6 @@ print_info ()
     message "Setting OMP_NUM_THREADS=$OMP_NUM_THREADS."
     message "Setting MKL_NUM_THREADS=$MKL_NUM_THREADS."
     message "Setting OMP_STACKSIZE=$OMP_STACKSIZE."
-    message "Setting XTBHOME=$XTBHOME."
     message "Setting XTBPATH=$XTBPATH."
 }
 
@@ -526,7 +545,7 @@ else
 fi
 
 #
-# Get some informations of the platform
+# Get some information of the current platform
 #
 nodename=$(uname -n)
 operatingsystem=$(uname -o)
@@ -539,6 +558,9 @@ if ! tmpfile="$( mktemp --tmpdir runxtb.err.XXXXXX 2> /dev/null )" ; then
   tmpfile="/dev/null"
 fi
 debug "Writing errors to temporary file '$tmpfile'."
+
+# Clean up in case of emergency
+trap cleanup_and_quit EXIT SIGTERM
 
 #
 # Details about this script
@@ -602,6 +624,8 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       requested_walltime=$( validate_walltime "$OPTARG" )
       ;;
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
+    #hlp            For the values '', '0', 'auto' the script will guess.
+    #hlp            Use 'stdout', '-' to send output to standard out.
     o) 
       output_file="$OPTARG"
       ;;
@@ -649,9 +673,11 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     i) 
       run_interactive="yes"
       ;;
-    #hlp   -B <ARG> Set absolute path to xtb to <ARG>.
+    #hlp   -B <ARG> Set absolute path to the xtb executable to <ARG>.
+    #hlp            This will also set the callname and ignore an empty commandline.
+    #hlp            Assumed format for <ARG>: ./relative/or/absolute/path/to/XTBHOME/bin/'callname'
     B) 
-      XTBHOME="$( get_bindir "$OPTARG" "XTBHOME" )"
+      xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )"
       xtb_callname="${OPTARG##*/}"
       ;;
     #hlp   -C <ARG> Change the callname of the script.
@@ -686,7 +712,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       ;;
 
     #hlp Current settings:
-    #hlp   XTBHOME="$XTBHOME" 
+    #hlp   xtb_install_root="$xtb_install_root" (will set XTBPATH)
     #hlp   xtb_callname="$xtb_callname"
     #hlp   use_modules="$use_modules" 
     #hlp   load_modules=("${load_modules[*]}")
@@ -731,32 +757,32 @@ message "This is not the original xtb program!"
 message "This is only a wrapper to set paths and variables."
 
 if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-  # Loading the modules should take care of everything except threads
+  debug "Using modules."
+  # Loading the modules should take care of everything except threats
   load_xtb_modules || fatal "Failed loading modules."
-fi
-
-# If not set explicitly, assume xtb is in same directory as script
-[[ -z $XTBHOME ]] && XTBHOME="$scriptpath"
-[[ -z $XTBPATH ]] && XTBPATH="$XTBHOME"
-
-if check_program "$XTBHOME/$xtb_callname" ; then
-  # Theoretically this should be completely obsolete from version 6.0 onwards
-  # and instead the approach below should be used
-  add_to_PATH "$XTBHOME"
-  debug "Found program: $( command -v "$xtb_callname" )"
 else
-  message "Trying recommended approach for xtb 6.0"
-  add_to_PATH "$XTBHOME/bin"
-  add_to_PATH "$XTBHOME/scripts"
-  add_to_MANPATH "$XTBHOME/man"
-  debug "Found program: $( command -v "$xtb_callname" )"
-  check_program "$XTBHOME/bin/$xtb_callname" || fatal "Cannot continue"
+  debug "Using path settings."
+  # Assume if there is no special configuration applied which sets the install directory
+  # that the scriptdirectory is also the root directory of xtb
+  XTBPATH="${xtb_install_root:-$scriptpath}"
+  if [[ -d "${XTBPATH}/bin" ]] ; then
+    add_to_PATH "${XTBPATH}/bin"
+  else
+    fatal "Cannot locate bin directory in '$XTBPATH'."
+  fi
+  # Add the manual path, even though we won't need it
+  [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
+  export XTBPATH PATH MANPATH
 fi
+
+# Check whether we have the right executable
+debug "$xtb_callname is '$( command -v "$xtb_callname")'" || fatal "Command not found: $xtb_callname"
 
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
-debug "Settings: XTBHOME=$XTBHOME xtb_callname=$xtb_callname"
-debug "(current) use_modules=$use_modules load_modules=(${load_modules[*]})"
+debug "Settings: xtb_install_root=$xtb_install_root (= XTBPATH)"
+debug "(current) xtb_callname=$xtb_callname"
+debug "          use_modules=$use_modules load_modules=(${load_modules[*]})"
 debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
 debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
 debug "          outputfile=$output_file run_interactive=$run_interactive"
@@ -766,13 +792,17 @@ debug "          processortype=$processortype"
 
 print_info
 
+# Create a filename for the output (jobname cannot be empty, output_file may not be empty)
+[[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.runxtb.out"
+debug "Output goes to: $output_file"
+
 if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
   [[ -z $request_qsys ]] && fatal "No queueing system specified."
-  [[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.subxtb.out"
   backup_if_exists "$output_file"
   submitscript=$(write_submit_script "$request_qsys" "$output_file")
+  debug "Created '$submitscript'."
+
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
-    debug "Created '$submitscript'."
     if [[ $request_qsys =~ [Pp][Bb][Ss] ]] ; then
       submit_id="Submitted as $(qsub "$submitscript")" || exit_status="$?"
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
@@ -791,31 +821,19 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
-  if [[ -z $output_file ]] ; then 
-    $xtb_callname "${xtb_commands[@]}" 
-    exit_status="$?" # Carry over exit status
-  elif [[ "$output_file" =~ ^(0|[Aa][Uu][Tt][Oo])$ ]] ; then
-    # Enables automatic generation of output-filename in 'interactive' mode
-    output_file="$jobname.runxtb.out"
-    message "Will write xtb output to '$output_file'."
-    backup_if_exists "$output_file"
-    $xtb_callname "${xtb_commands[@]}" > "$output_file"
+  if [[ $output_file  =~ (-|[Ss][Tt][Dd][Oo][Uu][Tt]) ]] ; then 
+    "$xtb_callname" "${xtb_commands[@]}" 
     exit_status="$?" # Carry over exit status
   else
+    message "Will write xtb output to '$output_file'."
     backup_if_exists "$output_file"
-    $xtb_callname "${xtb_commands[@]}" > "$output_file"
+    "$xtb_callname" "${xtb_commands[@]}" > "$output_file"
     exit_status="$?" # Carry over exit status
   fi
 else
-  fatal "Unrecognised mode; abort."
+  fatal "Unrecognised mode '$run_interactive'; abort."
 fi
 
-# Clean up
-if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
-  debug "$(rm -vf "$tmpfile")"
-fi
-
-message "Runxtb ($version, $versiondate) wrapper script completed."
-exec 3>&-
+cleanup_and_quit
 #hlp ===== End of Script ===== (Martin, $version, $versiondate)
-exit $exit_status
+
