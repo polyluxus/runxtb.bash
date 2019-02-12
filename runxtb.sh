@@ -71,39 +71,67 @@ helpme ()
 
 display_howto ()
 {
-    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
-      debug "Using modules."
-      # Loading the modules should take care of everything except threats
-      load_xtb_modules || fatal "Failed loading modules."
-    fi
-    if [[ -z $XTBHOME ]] ; then
-      fatal "XTBHOME is unset."
+  local show_howto="${1:-xtb}"
+  if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+    debug "Using modules."
+    # Loading the modules should take care of everything except threats
+    load_xtb_modules || fatal "Failed loading modules."
+  else
+    debug "Using path settings."
+    # Assume if there is no special configuration applied which sets the install directory
+    # that the scriptdirectory is also the root directory of xtb
+    [[ -z $xtb_install_root ]] && xtb_install_root="$scriptpath"
+    XTBPATH="$xtb_install_root"
+  fi
+  # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
+  local xtb_manpath xtbpath_munge
+  # Since XTBPATH must be set, parse that first for the manpath
+  if [[ -n $XTBPATH ]] ; then
+    while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
+      [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
+      xtb_manpath="${BASH_REMATCH[1]}/man"
+      break
+    done
+  else
+    warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
+    warning "Please check your installation."
+  fi 
+  # If no man directory is found along path, fallback to XTBHOME
+  if [[ -z $xtb_manpath ]] ; then
+    # Assume if XTBHOME is set, it is the root directorry and contains the man directory
+    if [[ -n $XTBHOME ]] ; then
+      if [[ -d "$XTBHOME/man" ]] ; then
+        xtb_manpath="$XTBHOME/man"
+      else 
+        fatal "Manual directory '$XTBHOME/man' is missing."
+      fi
     else
-      add_to_MANPATH "$XTBHOME/man"
+      fatal "The fallback environment variable 'XTBHOME' is unset."
     fi
-    debug "XTBHOME=$XTBHOME"
-    debug "$(ls -w70 -Am "$XTBHOME" 2>&1)"
-    debug "XTBPATH=$XTBPATH"
-#   debug "         1         2         3         4         5         6         7         8"
-#   debug "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+  else
+    # Add the found directory to the manpath
+    add_to_MANPATH "$xtb_manpath"
+  fi
+  debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
 
-    warning "From version 6.0 onwards there is no HOWTO included."
-    message "Trying to display the man page instead."
+  message "From version 6.0 onwards there is no HOWTO included, displaying man page instead."
 
-    if man xtb ; then
-      debug "Displaying man page was successful, exit now."
-      exit
-    else
-      debug "No manpage available. Try HOWTO."
-    fi
-
-    [[ -e "$XTBHOME/HOWTO" ]] || fatal "Cannot find 'HOWTO' of xTB."
-    if command -v less > /dev/null ; then
-      less "$XTBHOME/HOWTO"
-    else
-      cat "$XTBHOME/HOWTO"
-    fi
+  debug "Showing manual for $show_howto."
+  if man "$show_howto" ; then
+    debug "Displaying man page was successful, exit now."
     exit 0
+  else
+    debug "No manpage available. Try fallback to HOWTO."
+  fi
+
+  [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
+  local less_cmd
+  if less_cmd="$( command -v less 2> /dev/null )" ; then
+    "$less_cmd" "$XTBHOME/HOWTO"
+  else
+    cat "$XTBHOME/HOWTO"
+  fi
+  exit 0
 }
 
 expand_tilde_path ()
@@ -255,7 +283,7 @@ load_xtb_modules ()
   sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
   # Check whether then modules were loaded ok
   local check_module
-  for check_module in "${load_modules[*]}" ; do
+  for check_module in "${load_modules[@]}" ; do
     if grep -q -E "${check_module}.*[Oo][Kk]" "$tmpfile" ; then
       debug "Module '${check_module}' loaded successfully."
     else
@@ -552,7 +580,7 @@ fi
 
 OPTIND=1
 
-while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
+while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
   case $options in
     #hlp OPTIONS:
     #hlp   Any switches used will overwrite rc settings,
@@ -642,9 +670,13 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhH options ; do
     h) 
       helpme 
       ;;
-    #hlp   -H       Displays the HOWTO file from the xtb distribution
+    #hlp   -H       Displays the man page of xtb of the installation.
     H) 
-      display_howto 
+      display_howto "xtb"
+      ;;
+    #hlp   -X       Displays the man page of xcontrol of the installation.
+    X) 
+      display_howto "xcontrol"
       ;;
     \?) 
       fatal "Invalid option: -$OPTARG." 
