@@ -820,7 +820,8 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
-  if [[ $output_file  =~ (-|[Ss][Tt][Dd][Oo][Uu][Tt]) ]] ; then 
+  if [[ $output_file  =~ ^[[:space:]]*(-|[Ss][Tt][Dd][Oo][Uu][Tt])[[:space:]]*$ ]] ; then 
+    debug "Writing to stdout, Caught ${BASH_REMATCH[1]} in '$output_file'."
     "$xtb_callname" "${xtb_commands[@]}" 
     exit_status="$?" # Carry over exit status
   else
