@@ -522,6 +522,7 @@ write_submit_script ()
 		date
 		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
 		date
+		[[ -e molden.input ]] && mv -v -- molden.input "${output_file%.*}.molden"
 		
 		EOF
 
@@ -828,9 +829,16 @@ elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
   else
     message "Will write xtb output to '$output_file'."
     backup_if_exists "$output_file"
-    "$xtb_callname" "${xtb_commands[@]}" > "$output_file"
+    "$xtb_callname" "${xtb_commands[@]}" > "$output_file" 2> "${output_file%.*}.err"
     exit_status="$?" # Carry over exit status
+    # If the error file says everything is normal, delete it
+    if grep -q -E "normal termination of xtb" "${output_file%.*}.err" ; then
+      debug "$( cat "${output_file%.*}.err" )"
+      debug "$( rm -v -- "${output_file%.*}.err" )"
+    fi
   fi
+  # If a molden file is written, move it to a new filename
+  [[ -e molden.input ]] && message "$(mv -v -- molden.input "${output_file%.*}.molden")"
 else
   fatal "Unrecognised mode '$run_interactive'; abort."
 fi
