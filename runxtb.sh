@@ -305,7 +305,8 @@ load_xtb_modules ()
   # Check whether then modules were loaded ok
   local check_module
   for check_module in "${load_modules[@]}" ; do
-    if grep -q -E "${check_module}.*[Oo][Kk]" "$tmpfile" ; then
+    # Cut after a slash is encountered (probably works universally), there is a check for the command anyway
+    if grep -q -E "${check_module%%/*}.*[Oo][Kk]" "$tmpfile" ; then
       debug "Module '${check_module}' loaded successfully."
     else
       debug "Issues loading module '${check_module}'."
