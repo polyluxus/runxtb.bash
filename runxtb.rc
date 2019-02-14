@@ -3,12 +3,11 @@
 
 ## Set default processes (< number of available cores).
 #
-   OMP_NUM_THREADS=4
-   MKL_NUM_THREADS=4
+   requested_numCPU=4
 
 ## Set default memory to be used in megabyte.
 #
-   OMP_STACKSIZE=1000
+   requested_memory=1000
 
 ## Set installation directory (not including the executable).
 #
