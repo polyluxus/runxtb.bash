@@ -305,7 +305,8 @@ load_xtb_modules ()
   # Check whether then modules were loaded ok
   local check_module
   for check_module in "${load_modules[@]}" ; do
-    if grep -q -E "${check_module}.*[Oo][Kk]" "$tmpfile" ; then
+    # Cut after a slash is encountered (probably works universally), there is a check for the command anyway
+    if grep -q -E "${check_module%%/*}.*[Oo][Kk]" "$tmpfile" ; then
       debug "Module '${check_module}' loaded successfully."
     else
       debug "Issues loading module '${check_module}'."
@@ -345,14 +346,6 @@ add_to_MANPATH ()
     [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
     [[ :$MANPATH: =~ :$1: ]] || PATH="$1:$MANPATH"
     debug "$PATH"
-}
-
-print_info ()
-{
-    message "Setting OMP_NUM_THREADS=$OMP_NUM_THREADS."
-    message "Setting MKL_NUM_THREADS=$MKL_NUM_THREADS."
-    message "Setting OMP_STACKSIZE=$OMP_STACKSIZE."
-    message "Setting XTBPATH=$XTBPATH."
 }
 
 #
@@ -434,14 +427,14 @@ write_submit_script ()
     echo "# Submission script automatically created with runxtb.sh" >&9
 
     # Add some overhead
-    local corrected_OMP_STACKSIZE
-    corrected_OMP_STACKSIZE=$(( OMP_STACKSIZE + 50 ))
+    local corrected_memory
+    corrected_memory=$(( requested_memory + 100 ))
     
     # Header is different for the queueing systems
     if [[ "$queue" =~ [Pp][Bb][Ss] ]] ; then
       cat >&9 <<-EOF
-			#PBS -l nodes=1:ppn=$OMP_NUM_THREADS
-			#PBS -l mem=${corrected_OMP_STACKSIZE}m
+			#PBS -l nodes=1:ppn=$requested_numCPU
+			#PBS -l mem=${corrected_memory}m
 			#PBS -l walltime=$requested_walltime
 			#PBS -N ${submitscript_filename%.*}
 			#PBS -m ae
@@ -450,9 +443,9 @@ write_submit_script ()
 			EOF
     elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
-			#BSUB -n $OMP_NUM_THREADS
+			#BSUB -n $requested_numCPU
 			#BSUB -a openmp
-			#BSUB -M $corrected_OMP_STACKSIZE
+			#BSUB -M $corrected_memory
 			#BSUB -W ${requested_walltime%:*}
 			#BSUB -J ${submitscript_filename%.*}
 			#BSUB -N
@@ -481,7 +474,7 @@ write_submit_script ()
 
 		echo "This is \$(uname -n)"
 		echo "OS \$(uname -p) (\$(uname -p))"
-		echo "Running on $OMP_NUM_THREADS \$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)."
+		echo "Running on $requested_numCPU \$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)."
 		echo "Calculation with $xtb_callname from $PWD."
 		echo "Working directry is $PWD"
 
@@ -513,14 +506,15 @@ write_submit_script ()
     cat >&9 <<-EOF
 		# Test the command
 		command -v "$xtb_callname" || exit 1
-		export OMP_NUM_THREADS="$OMP_NUM_THREADS"
-		export MKL_NUM_THREADS="$MKL_NUM_THREADS"
-		export OMP_STACKSIZE="${OMP_STACKSIZE}m"  
+		export OMP_NUM_THREADS="$requested_numCPU"
+		export MKL_NUM_THREADS="$requested_numCPU"
+		export OMP_STACKSIZE="${requested_memory}m"  
 		ulimit -s unlimited || exit 1
 
 		date
 		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
 		date
+		[[ -e molden.input ]] && mv -v -- molden.input "${output_file%.*}.molden"
 		
 		EOF
 
@@ -564,18 +558,17 @@ trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 #
 # Details about this script
 #
-version="0.2.0"
-versiondate="2019-02-12"
+version="0.2.1"
+versiondate="2019-02-14"
 
 #
 # Set some Defaults
 #
 
-OMP_NUM_THREADS=4
-MKL_NUM_THREADS=4
-OMP_STACKSIZE=1000
 xtb_callname="xtb"
 requested_walltime="24:00:00"
+requested_numCPU=4
+requested_memory=1000
 run_interactive="yes"
 request_qsys="pbs-gen"
 bsub_project="default"
@@ -610,13 +603,12 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   -p <ARG> Set number of professors
     p) 
       validate_integer "$OPTARG"
-      OMP_NUM_THREADS="$OPTARG"
-      MKL_NUM_THREADS="$OPTARG"
+      requested_numCPU="$OPTARG"
       ;;
     #hlp   -m <ARG> Set the number of memories (in megabyte)
     m)
       validate_integer "$OPTARG"
-      OMP_STACKSIZE="${OPTARG}"
+      requested_memory="${OPTARG}"
       ;;
     #hlp   -w <ARG> Set the walltime when sent to the queue
     w)
@@ -715,9 +707,8 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   xtb_callname="$xtb_callname"
     #hlp   use_modules="$use_modules" 
     #hlp   load_modules=("${load_modules[*]}")
-    #hlp   OMP_NUM_THREADS="$OMP_NUM_THREADS"
-    #hlp   MKL_NUM_THREADS="$MKL_NUM_THREADS"
-    #hlp   OMP_STACKSIZE="$OMP_STACKSIZE"
+    #hlp   requested_numCPU="$requested_numCPU"
+    #hlp   requested_memory="$requested_memory"
     #hlp   requested_walltime="$requested_walltime"
     #hlp   outputfile="$output_file"
     #hlp   run_interactive="$run_interactive"
@@ -777,19 +768,24 @@ fi
 # Check whether we have the right executable
 debug "$xtb_callname is '$( command -v "$xtb_callname")'" || fatal "Command not found: $xtb_callname"
 
+# Set and export other environment variables
+OMP_NUM_THREADS="$requested_numCPU"
+MKL_NUM_THREADS="$requested_numCPU"
+OMP_STACKSIZE="$requested_memory"
+
 export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
-debug "Settings: xtb_install_root=$xtb_install_root (= XTBPATH)"
-debug "(current) xtb_callname=$xtb_callname"
-debug "          use_modules=$use_modules load_modules=(${load_modules[*]})"
-debug "          OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
-debug "          OMP_STACKSIZE=$OMP_STACKSIZE requested_walltime=$requested_walltime"
-debug "          outputfile=$output_file run_interactive=$run_interactive"
-debug "Platform: nodename=$nodename; operatingsystem=$operatingsystem"
-debug "(current) architecture=$architecture"
-debug "          processortype=$processortype"
-
-print_info
+debug "Settings:    xtb_install_root=$xtb_install_root (= XTBPATH)"
+debug "(current)    xtb_callname=$xtb_callname"
+debug "             use_modules=$use_modules load_modules=(${load_modules[*]})"
+debug "             requested_numCPU=$requested_numCPU requested_memory=$requested_memory"
+debug "             requested_walltime=$requested_walltime"
+debug "             outputfile=$output_file run_interactive=$run_interactive"
+debug "Environment: XTBPATH=$XTBPATH OMP_STACKSIZE=$OMP_STACKSIZE"
+debug "             OMP_NUM_THREADS=$OMP_NUM_THREADS MKL_NUM_THREADS=$MKL_NUM_THREADS"
+debug "Platform:    nodename=$nodename; operatingsystem=$operatingsystem"
+debug "(current)    architecture=$architecture"
+debug "             processortype=$processortype"
 
 # Create a filename for the output (jobname cannot be empty, output_file may not be empty)
 [[ $output_file =~ ^(|0|[Aa][Uu][Tt][Oo])$ ]] && output_file="$jobname.runxtb.out"
@@ -820,15 +816,23 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
-  if [[ $output_file  =~ (-|[Ss][Tt][Dd][Oo][Uu][Tt]) ]] ; then 
+  if [[ $output_file  =~ ^[[:space:]]*(-|[Ss][Tt][Dd][Oo][Uu][Tt])[[:space:]]*$ ]] ; then 
+    debug "Writing to stdout, Caught ${BASH_REMATCH[1]} in '$output_file'."
     "$xtb_callname" "${xtb_commands[@]}" 
     exit_status="$?" # Carry over exit status
   else
     message "Will write xtb output to '$output_file'."
     backup_if_exists "$output_file"
-    "$xtb_callname" "${xtb_commands[@]}" > "$output_file"
+    "$xtb_callname" "${xtb_commands[@]}" > "$output_file" 2> "${output_file%.*}.err"
     exit_status="$?" # Carry over exit status
+    # If the error file says everything is normal, delete it
+    if grep -q -E "normal termination of xtb" "${output_file%.*}.err" ; then
+      debug "$( cat "${output_file%.*}.err" )"
+      debug "$( rm -v -- "${output_file%.*}.err" )"
+    fi
   fi
+  # If a molden file is written, move it to a new filename
+  [[ -e molden.input ]] && message "$(mv -v -- molden.input "${output_file%.*}.molden")"
 else
   fatal "Unrecognised mode '$run_interactive'; abort."
 fi

@@ -193,21 +193,21 @@ recover_rc ()
     return 1
   fi
 
-  use_threads="$OMP_NUM_THREADS"
+  use_threads="$requested_numCPU"
   if [[ -z $use_threads ]] ; then
     ask_threads
   else
-    message "Recovered setting 'OMP_NUM_THREADS=$use_threads'"
+    message "Recovered setting 'requested_numCPU=$use_threads'"
     ask "Would you like to change this setting?"
     if read_boolean ; then ask_threads ; fi
   fi
   debug "use_threads=$use_threads"
      
-  use_memory="$OMP_STACKSIZE"
+  use_memory="$requested_memory"
   if [[ -z $use_memory ]] ; then
     ask_memory
   else
-    message "Recovered setting 'OMP_STACKSIZE=$use_memory'"
+    message "Recovered setting 'requested_memory=$use_memory'"
     ask "Would you like to change this setting?"
     if read_boolean ; then ask_memory ; fi
   fi
@@ -558,11 +558,9 @@ print_settings ()
   echo     "## Set default processes (< number of available cores)."
   echo     "#  "
   if [[ -z $use_threads ]] ; then
-    echo   "#  OMP_NUM_THREADS=4"
-    echo   "#  MKL_NUM_THREADS=4"
+    echo   "#  requested_numCPU=4"
   else
-    echo   "   OMP_NUM_THREADS=$use_threads"
-    echo   "   MKL_NUM_THREADS=$use_threads"
+    echo   "   requested_numCPU=$use_threads"
   fi
   echo     "#  "
   echo     "###"
@@ -570,9 +568,9 @@ print_settings ()
   echo     "## Set default memory to be used in megabyte."
   echo     "#  "
   if [[ -z $use_memory ]] ; then
-    echo   "#  OMP_STACKSIZE=1000"
+    echo   "#  requested_memory=1000"
   else
-    echo   "   OMP_STACKSIZE=$use_memory"
+    echo   "   requested_memory=$use_memory"
   fi
   echo     "#  "
   echo     "###"
