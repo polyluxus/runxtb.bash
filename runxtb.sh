@@ -558,8 +558,8 @@ trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 #
 # Details about this script
 #
-version="0.2.0"
-versiondate="2019-02-12"
+version="0.2.1"
+versiondate="2019-02-14"
 
 #
 # Set some Defaults
