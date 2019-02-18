@@ -466,6 +466,24 @@ write_submit_script ()
           echo "#BSUB -R select[hpcwork]" >&9
         fi
       fi
+    elif [[ "$queue" =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
+      message "WIP"
+      cat >&9 <<-EOF
+			#SBATCH --jobname='${submitscript_filename%.*}'
+			#SBATCH --output='$submitscript_filename.o%J'
+			#SBATCH --error='$submitscript_filename.e%J'
+			#SBATCH --nodes=1 
+			#SBATCH --ntasks=1
+			#SBATCH --cpus-per-task=$requested_numCPU
+      #SBATCH --mem-per-cpu=$(( corrected_memory / requested_numCPU ))
+			#SBATCH --time=${requested_walltime}
+			#SBATCH --mail-type=END,FAIL
+			EOF
+      if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+        warning "No project selected."
+      else
+        echo "#SBATCH --account='$bsub_project'" >&9
+      fi
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
@@ -804,6 +822,8 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
       submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"
+    elif [[ "$queue" =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
+      submit_id="$(sbatch "$submitscript" )" || exit_status="$?"
     else
       fatal "Unrecognised queueing system '$request_qsys'."
     fi
