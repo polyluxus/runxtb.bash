@@ -82,35 +82,37 @@ display_howto ()
     # Assume if there is no special configuration applied which sets the install directory
     # that the scriptdirectory is also the root directory of xtb
     XTBPATH="${xtb_install_root:-$scriptpath}"
-  fi
-  # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
-  local xtb_manpath xtbpath_munge
-  # Since XTBPATH must be set, parse that first for the manpath
-  if [[ -n $XTBPATH ]] ; then
-    while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
-      [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
-      xtb_manpath="${BASH_REMATCH[1]}/man"
-      break
-    done
-  else
-    warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
-    warning "Please check your installation."
-  fi 
-  # If no man directory is found along path, fallback to XTBHOME
-  if [[ -z $xtb_manpath ]] ; then
-    # Assume if XTBHOME is set, it is the root directorry and contains the man directory
-    if [[ -n $XTBHOME ]] ; then
-      if [[ -d "$XTBHOME/man" ]] ; then
-        xtb_manpath="$XTBHOME/man"
-      else 
-        fatal "Manual directory '$XTBHOME/man' is missing."
+    debug "Setting XTBPATH=$XTBPATH"
+    # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
+    local xtb_manpath xtbpath_munge
+    # Since XTBPATH must be set, parse that first for the manpath
+    if [[ -n $XTBPATH ]] ; then
+      xtbpath_munge="$XTBPATH"
+      while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
+        [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
+        xtb_manpath="${BASH_REMATCH[1]}/man"
+        break
+      done
+    else
+      warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
+      warning "Please check your installation."
+    fi 
+    # If no man directory is found along path, fallback to XTBHOME
+    if [[ -z $xtb_manpath ]] ; then
+      # Assume if XTBHOME is set, it is the root directorry and contains the man directory
+      if [[ -n $XTBHOME ]] ; then
+        if [[ -d "$XTBHOME/man" ]] ; then
+          xtb_manpath="$XTBHOME/man"
+        else 
+          fatal "Manual directory '$XTBHOME/man' is missing."
+        fi
+      else
+        fatal "The fallback environment variable 'XTBHOME' is unset."
       fi
     else
-      fatal "The fallback environment variable 'XTBHOME' is unset."
+      # Add the found directory to the manpath
+      add_to_MANPATH "$xtb_manpath"
     fi
-  else
-    # Add the found directory to the manpath
-    add_to_MANPATH "$xtb_manpath"
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
 
@@ -122,16 +124,15 @@ display_howto ()
     exit 0
   else
     debug "No manpage available. Try fallback to HOWTO."
+    [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
+    local less_cmd
+    if less_cmd="$( command -v less 2> /dev/null )" ; then
+      "$less_cmd" "$XTBHOME/HOWTO"
+    else
+      cat "$XTBHOME/HOWTO"
+    fi
+    exit 0
   fi
-
-  [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
-  local less_cmd
-  if less_cmd="$( command -v less 2> /dev/null )" ; then
-    "$less_cmd" "$XTBHOME/HOWTO"
-  else
-    cat "$XTBHOME/HOWTO"
-  fi
-  exit 0
 }
 
 expand_tilde_path ()
