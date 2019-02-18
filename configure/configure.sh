@@ -256,20 +256,21 @@ recover_rc ()
   debug "use_interactivity=$use_interactivity"
 
   use_queue="$request_qsys"
-  use_bsub_project="$bsub_project"
+  # Try to recover old vrsion where it was bsub_project
+  use_qsys_project="${qsys_project:-$bsub_project}"
   if [[ -z $use_queue ]] ; then
     ask_qsys_details
   else
     message "Recovered queueing system setting 'request_qsys=$use_queue'."
-    if [[ ! -z $use_bsub_project ]] ; then 
-      message "Recovered project setting 'bsub_project=$bsub_project'."
+    if [[ -n $use_qsys_project ]] ; then 
+      message "Recovered project setting 'qsys_project=$qsys_project'."
       ask "Would you like to change these settings?"
     else
       ask "Would you like to change this setting?"
     fi
     if read_boolean ; then ask_qsys_details ; fi
   fi
-  debug "use_queue=$use_queue; use_bsub_project=$use_bsub_project"
+  debug "use_queue=$use_queue; use_qsys_project=$use_qsys_project"
 
   use_module_system="$use_modules"
   use_module_items=( "${load_modules[@]}" )
@@ -453,7 +454,7 @@ ask_interactivity ()
 
 ask_qsys_details ()
 {
-  message "Currently supported: pbs-gen, bsub-gen, bsub-rwth"
+  message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth"
   local test_queue
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
@@ -464,11 +465,17 @@ ask_qsys_details ()
     [Bb][Ss][Uu][Bb]* )
       use_queue="bsub-gen"
       ask "What project would you like to specify?"
-      use_bsub_project=$(read_human_input)
-      debug "use_bsub_project=$use_bsub_project"
+      use_qsys_project=$(read_human_input)
+      debug "use_qsys_project=$use_qsys_project"
       ;;&
     *[Rr][Ww][Tt][Hh] )
       use_queue="bsub-rwth"
+      ;;
+    [Ss][Ll][Uu][Rr][Mm]* )
+      use_queue="slurm-gen"
+      ask "What project would you like to specify?"
+      use_qsys_project=$(read_human_input)
+      debug "use_qsys_project=$use_qsys_project"
       ;;
     '' )
       : ;;
@@ -635,7 +642,7 @@ print_settings ()
   echo     "###"
 
   echo     "## Set default queueing system for which the script should be written"
-  echo     "## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source])"
+  echo     "## (pbs-gen, bsub-gen, slurm-gen, or *-rwth [special cases, see source])"
   echo     "#  "
   if [[ -z $use_queue ]] ; then
     echo   "#  request_qsys=\"bsub-rwth\""
@@ -645,14 +652,14 @@ print_settings ()
   echo     "#  "
   echo     "###"
 
-  echo     "## If project options are enabled (e.g. for bsub-rwth), "
-  echo     "## set to which it should be accounted."
+  echo     "## If project/ account options are enabled (e.g. for bsub-rwth), "
+  echo     "## set the name to which it should be accounted to."
   echo     "## This can be overwritten with -P0 or -P default."
   echo     "#"
-  if [[ -z $use_bsub_project ]] ; then
-    echo   "#  bsub_project=\"default\""
+  if [[ -z $use_qsys_project ]] ; then
+    echo   "#  qsys_project=\"default\""
   else
-    echo   "   bsub_project=\"$use_bsub_project\""
+    echo   "   qsys_project=\"$use_qsys_project\""
   fi
   echo     "#  "
   echo     "###"

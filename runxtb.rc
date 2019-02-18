@@ -47,15 +47,15 @@
    run_interactive="yes"
 
 ## Set default queueing system for which the script should be written.
-## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source code])
+## (pbs-gen, bsub-gen, slurm-gen or *-rwth [special cases, see source code])
 #
-   request_qsys="bsub-rwth"
+   request_qsys="slurm-gen"
 
 ## If project options are enabled (e.g. for bsub-rwth), 
 ## set to which it should be accounted.
 ## This can be overwritten with -P0 or -P default.
 #
-   bsub_project="default"
+   qsys_project="default"
 
 ## If modules are installed, their use can be enabled here.
 ## The default is setting the path, see above.
@@ -63,7 +63,7 @@
 #  use_modules="true"
    use_modules="false"
 #
-#  They need to be named, too. For example:
+#  They need to be named, too. For example (on CLAIX18):
 #
 #  load_modules[0]="CHEMISTRY"
 #  load_modules[1]="xtb"
@@ -73,4 +73,4 @@
    requested_walltime="24:00:00"
 
 #
-## End of example .runxtbrc (2019-02-12)
+## End of example .runxtbrc (2019-02-18)

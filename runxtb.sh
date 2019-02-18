@@ -453,12 +453,12 @@ write_submit_script ()
 			#BSUB -o $submitscript_filename.o%J
 			#BSUB -e $submitscript_filename.e%J
 			EOF
-      # If 'bsub_project' is empty, or '0', or 'default' (in any case, truncated after def)
+      # If 'qsys_project' is empty, or '0', or 'default' (in any case, truncated after def)
       # do not write this line to the script.
-      if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+      if [[ "$qsys_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
         warning "No project selected."
       else
-        echo "#BSUB -P $bsub_project" >&9
+        echo "#BSUB -P $qsys_project" >&9
       fi
       #add some more specific setup for RWTH
       if [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
@@ -479,10 +479,10 @@ write_submit_script ()
 			#SBATCH --time=${requested_walltime}
 			#SBATCH --mail-type=END,FAIL
 			EOF
-      if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+      if [[ "$qsys_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
         warning "No project selected."
       else
-        echo "#SBATCH --account='$bsub_project'" >&9
+        echo "#SBATCH --account='$qsys_project'" >&9
       fi
     else
       fatal "Unrecognised queueing system '$queue'."
@@ -590,7 +590,7 @@ requested_numCPU=4
 requested_memory=1000
 run_interactive="yes"
 request_qsys="pbs-gen"
-bsub_project="default"
+qsys_project="default"
 exit_status=0
 use_modules="false"
 declare -a load_modules
@@ -653,12 +653,10 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     Q)
       request_qsys="$OPTARG"
       ;;
-    #hlp   -P <ARG> Account to project <ARG>.
-    #hlp            This will automatically set '-Q bsub-rwth', too.
-    #hlp            (It will not trigger remote execution.)
+    #hlp   -P <ARG> Account to project (bsub) / account (slurm) <ARG>.
+    #hlp            The switch '-Q' has to be set appropriately.
     P) 
-      bsub_project="$OPTARG"
-      request_qsys="bsub-rwth"
+      qsys_project="$OPTARG"
       ;;
     #hlp   -M       Use modules instead of paths (work in progress).
     #hlp            Needs a specified modules list (set in rc).
@@ -732,7 +730,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   outputfile="$output_file"
     #hlp   run_interactive="$run_interactive"
     #hlp   request_qsys="$request_qsys"
-    #hlp   bsub_project="$bsub_project"
+    #hlp   qsys_project="$qsys_project"
     #hlp Platform information:
     #hlp   nodename="$nodename"
     #hlp   operatingsystem="$operatingsystem"
