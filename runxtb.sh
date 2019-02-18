@@ -48,7 +48,7 @@ fatal ()
 
 debug ()
 {
-    echo "DEBUG  : " "$*" >&4
+  echo "DEBUG  : (${FUNCNAME[1]})" "$*" >&4
 }    
 
 #
