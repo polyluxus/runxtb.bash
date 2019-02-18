@@ -91,7 +91,7 @@ The following script options are available:
               This also requires setting a queueing system with `-Q` (see below).
               (configuration option `run_interactive=sub`).
  * `-Q <ARG>` Set a queueing system for which the submitscript should be prepared.
-              Currently supported are `pbs-gen`, `bsub-gen`, and `bsub-rwth` 
+              Currently supported are `pbs-gen`, `slurm-gen`, `bsub-gen`, and `bsub-rwth` 
               (configuration option `request_qsys=<ARG>`).
  * `-P <ARG>` Account to project `<ARG>`, which will also (currently) trigger
               `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
@@ -118,7 +118,8 @@ The following script options are available:
               If specified twice, it will also suppress warnings,
               if specified more than twice, it will suppress also errors.
  * `-h`       Prints a small help text and current configuration.
- * `-H`       Opens the `HOWTO` (manual) of the original distribution.
+ * `-H`       Retrieve the man page of xtb of the original distribution.
+ * `-X`       Retrieve the man page of xcontrol of the original distribution.
 
 ## Included files
 
