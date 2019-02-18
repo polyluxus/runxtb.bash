@@ -14,9 +14,10 @@
 #  xtb_install_root="/path/to/xtb"
 #
 ## Set the name of the executable.
-## (This should be xtb. Here set to xtb.dummy for testing.)
+## (This should be xtb. Set to xtb.dummy for testing.)
 #
-   xtb_callname="xtb.dummy"
+#  xtb_callname="xtb.dummy"
+   xtb_callname="xtb"
 #
 ## The above two lines combined and inserting /bin/ should give the full path to the program, i.e.
 ## /path/to/XTBHOME/bin/xtb_callname

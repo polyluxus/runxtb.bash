@@ -224,6 +224,13 @@ recover_rc ()
     if read_boolean ; then ask_installation_path ; fi
   fi
   debug "use_xtbhome=$use_xtbhome; use_xtbname=$use_xtbname"
+  if [[ -z $use_xtbname ]] ; then 
+    ask_callname
+  else
+    message "recovered setting 'xtb_callname=$use_xtbname'."
+    ask "Would you like to change these settings?"
+    if read_boolean ; then ask_callname ; fi
+  fi
 
   use_chatty="$stay_quiet"
   if [[ -z $use_chatty ]] ; then
@@ -395,6 +402,13 @@ ask_installation_path ()
     unset use_xtbpath use_xtbhome
   fi
   debug "use_xtbhome=$use_xtbhome"
+  debug "use_xtbname=$use_xtbname"
+}
+
+ask_callname ()
+{
+  ask "What is the name of the xtb binary?"
+  use_xtbname="$(read_human_input)"
   debug "use_xtbname=$use_xtbname"
 }
 
