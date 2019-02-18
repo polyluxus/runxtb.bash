@@ -654,7 +654,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            (Can also be set in the rc.)
     l)
       use_modules="true"
-      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]+(.*)$ ]] ; then
+      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
         unset load_modules
         [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
       else
