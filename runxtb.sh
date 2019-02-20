@@ -421,6 +421,8 @@ write_submit_script ()
     backup_if_exists "$submitscript_filename"
     debug "Will write submitscript to: $submitscript"
 
+    local -a submit_commandline
+
     # Open file descriptor 9 for writing
     exec 9> "$submitscript_filename"
 
@@ -442,6 +444,7 @@ write_submit_script ()
 			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
 			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
 			EOF
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
     elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
 			#BSUB -n $requested_numCPU
@@ -466,16 +469,17 @@ write_submit_script ()
           echo "#BSUB -R select[hpcwork]" >&9
         fi
       fi
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
     elif [[ "$queue" =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
-      message "WIP"
+      message "This is still a work in progress."
       cat >&9 <<-EOF
-			#SBATCH --jobname='${submitscript_filename%.*}'
+			#SBATCH --job-name='${submitscript_filename%.*}'
 			#SBATCH --output='$submitscript_filename.o%J'
 			#SBATCH --error='$submitscript_filename.e%J'
 			#SBATCH --nodes=1 
 			#SBATCH --ntasks=1
 			#SBATCH --cpus-per-task=$requested_numCPU
-      #SBATCH --mem-per-cpu=$(( corrected_memory / requested_numCPU ))
+			#SBATCH --mem-per-cpu=$(( corrected_memory / requested_numCPU ))
 			#SBATCH --time=${requested_walltime}
 			#SBATCH --mail-type=END,FAIL
 			EOF
@@ -484,6 +488,7 @@ write_submit_script ()
       else
         echo "#SBATCH --account='$qsys_project'" >&9
       fi
+      submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
@@ -530,10 +535,12 @@ write_submit_script ()
 		export OMP_STACKSIZE="${requested_memory}m"  
 		ulimit -s unlimited || exit 1
 
+		exit_status=0
 		date
-		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
+		${submit_commandline[@]} > "$output_file" || exit_status=1 
 		date
 		[[ -e molden.input ]] && mv -v -- molden.input "${output_file%.*}.molden"
+		exit \$exit_status
 		
 		EOF
 
@@ -820,7 +827,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
       submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"
-    elif [[ "$queue" =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
+    elif [[ $request_qsys =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
       submit_id="$(sbatch "$submitscript" )" || exit_status="$?"
     else
       fatal "Unrecognised queueing system '$request_qsys'."
