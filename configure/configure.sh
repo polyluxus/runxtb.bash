@@ -726,21 +726,25 @@ print_settings ()
 
 create_bin_link ()
 {
-    local link_target_path="$HOME/bin"
-    local link_target_name="runxtb"
-    local link_target="$link_target_path/$link_target_name"
+  local link_target_path="$HOME/bin"
+  local link_target_name link_target link_source
     
+  for link_target_name in "runxtb" "crest.prepare" ; do
+    link_target="$link_target_path/$link_target_name"
+    link_source="$runxtbrc_path//${link_target_name}.sh"
     if [[ -e "$link_target" ]] ; then
       debug "Link '$link_target' does already exist."
+      continue
     else
       ask "Would you like to create a symbolic link '$link_target'?"
       if read_boolean ; then
         [[ -r "$link_target_path" ]] || fatal "Cannot read '$link_target_path'."
         [[ -w "$link_target_path" ]] || fatal "Cannot write to '$link_target_path'."
-        [[ -x "$runxtbrc_path/runxtb.sh" ]] || fatal "Not executable: '$runxtbrc_path/runxtb.sh'."
-        message "$(ln -vs "$runxtbrc_path/runxtb.sh" "$link_target")"
+        [[ -x "$link_source" ]] || fatal "Not executable: '$link_source'."
+        message "$( ln -vs "$link_source" "$link_target" )"
       fi
     fi
+  done
 }
 
 #
