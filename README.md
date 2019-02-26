@@ -131,16 +131,21 @@ The following files come with this script:
  * `runxtb.rc` An example set-up file.
  * `xtb.dummy` A tiny bash script only for testing. 
    This will only echo `<coord_file> [options]` verbatim.
+ * `crest.prepare.sh` A small script that creates a new directory 
+   with a suitable `coord` file to start a `crest` run.
  * `README.md` This file.
  * `configure` A directury containing a script to configure the wrapper.
 
 ## Exit status
 
-The script carries over the exit statusses of its dependencies.
+The script `runxtb` carries over the exit statusses of its dependencies.
 In interactive mode that is the exit status of `xtb`.
-In submission mode it is the exit status of `qsub` or `bsub`.
+In submission mode it is the exit status of `qsub`, `bsub`, or `sbatch`.
 In all other cases it will be `0` if everything went according to plan,
 or `1` if there was a problem.  
+The script `crest.prepare.sh` will exit with `0` if nothing went wrong 
+and a crest run can be started. If files are not present, or I/O operations
+fail it will exit with `1`.  
 The dummy script `xtb.dummy` always exits with `2`.
 
 ## Debug
@@ -157,4 +162,4 @@ please include the debug output when submitting a bug report to the
 [GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
 
-(Martin; 2019-02-14; wrapper version 0.2.1)
+(Martin; 2019-02-26; wrapper version 0.3.0_alpha2)
