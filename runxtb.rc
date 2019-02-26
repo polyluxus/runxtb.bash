@@ -48,7 +48,9 @@
    run_interactive="yes"
 
 ## Set default queueing system for which the script should be written.
-## (pbs-gen, bsub-gen, slurm-gen or *-rwth [special cases, see source code])
+## Format <queue>-<special>
+## Recognised values for <queue>: pbs, bsub, slurm
+## Recognised values for <special>: gen, rwth (no effect for pbs) [special cases, see source code]
 #
    request_qsys="slurm-gen"
 

@@ -468,7 +468,7 @@ ask_interactivity ()
 
 ask_qsys_details ()
 {
-  message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth"
+  message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth, slurm-rwth"
   local test_queue
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
@@ -490,6 +490,9 @@ ask_qsys_details ()
       ask "What project would you like to specify?"
       use_qsys_project=$(read_human_input)
       debug "use_qsys_project=$use_qsys_project"
+      ;;&
+    *[Rr][Ww][Tt][Hh] )
+      use_queue="slurm-rwth"
       ;;
     '' )
       : ;;

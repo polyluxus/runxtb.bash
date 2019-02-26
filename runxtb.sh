@@ -464,7 +464,7 @@ write_submit_script ()
         echo "#BSUB -P $qsys_project" >&9
       fi
       #add some more specific setup for RWTH
-      if [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
         if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
           echo "#BSUB -R select[hpcwork]" >&9
         fi
@@ -474,8 +474,8 @@ write_submit_script ()
       message "This is still a work in progress."
       cat >&9 <<-EOF
 			#SBATCH --job-name='${submitscript_filename%.*}'
-			#SBATCH --output='$submitscript_filename.o%J'
-			#SBATCH --error='$submitscript_filename.e%J'
+			#SBATCH --output='$submitscript_filename.o%j'
+			#SBATCH --error='$submitscript_filename.e%j'
 			#SBATCH --nodes=1 
 			#SBATCH --ntasks=1
 			#SBATCH --cpus-per-task=$requested_numCPU
@@ -487,6 +487,12 @@ write_submit_script ()
         warning "No project selected."
       else
         echo "#SBATCH --account='$qsys_project'" >&9
+      fi
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
+        if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
+          echo "#SBATCH --constraint=hpcwork" >&9
+        fi
+        echo "#SBATCH --export=NONE" >&9
       fi
       submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
     else
@@ -656,7 +662,10 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     S) 
       run_interactive="sub"
       ;;
-    #hlp   -Q <ARG> Select queueing system (pbs-gen, bsub-rwth)
+    #hlp   -Q <ARG> Select queueing system (Default: pbs-gen)
+    #hlp            Format: <queue>-<special>
+    #hlp            Recognised values for <queue>: pbs, bsub, slurm
+    #hlp            Recognised values for <special>: gen, rwth (no effect for pbs)
     Q)
       request_qsys="$OPTARG"
       ;;

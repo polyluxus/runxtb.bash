@@ -91,8 +91,10 @@ The following script options are available:
               This also requires setting a queueing system with `-Q` (see below).
               (configuration option `run_interactive=sub`).
  * `-Q <ARG>` Set a queueing system for which the submitscript should be prepared.
-              Currently supported are `pbs-gen`, `slurm-gen`, `bsub-gen`, and `bsub-rwth` 
+              Currently supported are `pbs-gen`, `slurm-gen`, `slurm-rwth`, `bsub-gen`, and `bsub-rwth` 
               (configuration option `request_qsys=<ARG>`).
+              The `*rwth` suffix will test a few more options and will set some constraints according to
+              the recommendations of the RWTH IT centre.
  * `-P <ARG>` Account to project `<ARG>`, which will also (currently) trigger
               `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
  * `-M`       Use preinstalled modules instead of paths. 
