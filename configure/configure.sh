@@ -276,7 +276,7 @@ recover_rc ()
   else
     message "Recovered queueing system setting 'request_qsys=$use_queue'."
     if [[ -n $use_qsys_project ]] ; then 
-      message "Recovered project setting 'qsys_project=$qsys_project'."
+      message "Recovered project setting 'qsys_project=$use_qsys_project'."
       ask "Would you like to change these settings?"
     else
       ask "Would you like to change this setting?"
@@ -734,7 +734,7 @@ create_bin_link ()
     
   for link_target_name in "runxtb" "crest.prepare" ; do
     link_target="$link_target_path/$link_target_name"
-    link_source="$runxtbrc_path//${link_target_name}.sh"
+    link_source="$runxtbrc_path/${link_target_name}.sh"
     if [[ -e "$link_target" ]] ; then
       debug "Link '$link_target' does already exist."
       continue
