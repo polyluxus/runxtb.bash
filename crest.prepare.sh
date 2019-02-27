@@ -66,6 +66,21 @@ helpme ()
     exit 0
 }
 
+backup_if_exists ()
+{
+  local move_source="$1"
+  # File does not exist, then everithing is fine, return with status 0
+  [[ -f "$move_source" ]] || return 0
+  # File exists, print a warning 
+  warning "File '$move_source' already exists."
+  # make a backup 
+  # (test default name first, if that exists, relegate to tool)
+  local move_target="${move_source}.bak"
+  [[ -f "$move_target" ]] && move_target=$( mktemp "${move_target}.XXXX" ) 
+  # if moving failed for whatever reason, return with status 1
+  message "Create backup: $( mv -v -- "$move_source" "$move_target" 2>&1 )" || return 1
+}
+
 ###
 #
 # MAIN
@@ -91,7 +106,10 @@ while getopts :d:qh options ; do
   case $options in
     #hlp OPTIONS:
     #hlp 
-    #hlp   -d <ARG> Use <ARG> as directory name to set up.
+    #hlp   -d <ARG> Use <ARG> as directory name to set up. [Default: crest]
+    #hlp            If <ARG> is '.', then skip creating a directory, 
+    #hlp            instead convert a found '*.xyz' to 'coord', or
+    #hlp            rename existing 'xtbopt.coord' to 'coord'.
     d) 
       crest_dir="$OPTARG"
       ;;
@@ -115,14 +133,20 @@ while getopts :d:qh options ; do
 done
 
 crest_dir="${crest_dir:-crest}"
-[[ -d "$crest_dir" ]] && fatal "Directory exists: $crest_dir"
-message "$( mkdir -v -- "$crest_dir" )" || fatal "Failed to create '$crest_dir'."
+if [[  "$crest_dir" != '.' ]] ; then
+  [[ -d "$crest_dir" ]] && fatal "Directory exists: $crest_dir"
+  message "$( mkdir -v -- "$crest_dir" )" || fatal "Failed to create '$crest_dir'."
+else
+  debug "Target directory is '$crest_dir'."
+fi
 
 if [[ -r "xtbopt.xyz" ]] ; then
   obabel_cmd="$( command -v obabel )" || fatal "Command not found: obabel"
-  message "$( "$obabel_cmd" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" )"
+  backup_if_exists "$crest_dir/coord"
+  message "$( "$obabel_cmd" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
 elif [[ -r "xtbopt.coord" ]] ; then
   message "Found optimised molecular structure in turbomole format."
+  backup_if_exists "$crest_dir/coord"
   message "$( cp -v -- "xtbopt.coord" "$crest_dir/coord" )"
 else
   warning "No optimised molecular structure found in current directory."
@@ -130,11 +154,13 @@ else
     if [[ -r "$structure_file" ]] ; then
       message "Will use molecular structure in '$structure_file' instead."
       if [[ "$structure_file" == "coord" ]] ; then
+        [[ "$crest_dir" == '.' ]] && fatal "'$structure_file' and '$crest_dir/coord' are the same file."
         message "$( cp -v -- "$structure_file" "$crest_dir/coord" )"
         break
       else
         obabel_cmd="$( command -v obabel )" || fatal "Command not found: obabel"
-        message "$( "$obabel_cmd" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" )"
+        backup_if_exists "$crest_dir/coord"
+        message "$( "$obabel_cmd" -ixyz "$structure_file" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
         break
       fi
     fi
