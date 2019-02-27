@@ -12,6 +12,7 @@
 ## Set installation directory (not including the executable).
 #
 #  xtb_install_root="/path/to/xtb"
+   xtb_install_root=""
 #
 ## Set the name of the executable.
 ## (This should be xtb. Set to xtb.dummy for testing.)

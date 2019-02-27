@@ -17,6 +17,12 @@ warning ()
     return 1
 }
 
+fatal ()
+{
+    echo    "ERROR  :  $*" >&2
+    exit 1
+}
+
 debug ()
 {
     echo    "DEBUG   : $*" >&4
@@ -337,7 +343,7 @@ read_boolean ()
   pattern_true_false="[Tt]([Rr]([Uu][Ee]?)?)?|[Ff]([Aa]([Ll]([Ss][Ee]?)?)?)?"
   pattern_yes_no="[Yy]([Ee][Ss]?)?|[Nn][Oo]?"
   pattern="($pattern_true_false|$pattern_yes_no|0|1)"
-  until [[ $readvar =~ ^[[:space:]]*$pattern[[:space:]]*$ ]] ; do
+  until [[ $readvar =~ ^[[:space:]]*${pattern}[[:space:]]*$ ]] ; do
     message "Please enter t(rue)/y(es)/1 or f(alse)/n(o)/0."
     echo -n "Answer  : " >&3
     read -r readvar
@@ -482,9 +488,6 @@ ask_qsys_details ()
       use_qsys_project=$(read_human_input)
       debug "use_qsys_project=$use_qsys_project"
       ;;&
-    *[Rr][Ww][Tt][Hh] )
-      use_queue="bsub-rwth"
-      ;;
     [Ss][Ll][Uu][Rr][Mm]* )
       use_queue="slurm-gen"
       ask "What project would you like to specify?"
@@ -492,7 +495,7 @@ ask_qsys_details ()
       debug "use_qsys_project=$use_qsys_project"
       ;;&
     *[Rr][Ww][Tt][Hh] )
-      use_queue="slurm-rwth"
+      use_queue="${use_queue%-*}-rwth"
       ;;
     '' )
       : ;;
