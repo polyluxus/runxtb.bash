@@ -88,10 +88,19 @@ display_howto ()
     # Since XTBPATH must be set, parse that first for the manpath
     if [[ -n $XTBPATH ]] ; then
       xtbpath_munge="$XTBPATH"
-      while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
-        [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
-        xtb_manpath="${BASH_REMATCH[1]}/man"
-        break
+      local path_pattern="^:([^:]+):(.*)$"
+      debug "xtbpath_munge=$xtbpath_munge"
+      while [[ ":${xtbpath_munge}:" =~ $path_pattern ]] ; do 
+        debug "Pattern matched: ${BASH_REMATCH[0]}"
+        if [[ -d "${BASH_REMATCH[1]}/man" ]] ; then 
+          xtb_manpath="${BASH_REMATCH[1]}/man"
+          debug "Use xtb_manpath=$xtb_manpath"
+          break
+        else
+          xtbpath_munge="${BASH_REMATCH[2]}" 
+          debug "xtbpath_munge=$xtbpath_munge"
+          continue
+        fi
       done
     else
       warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
@@ -99,10 +108,13 @@ display_howto ()
     fi 
     # If no man directory is found along path, fallback to XTBHOME
     if [[ -z $xtb_manpath ]] ; then
+      debug "Could not identify xtb manual path."
       # Assume if XTBHOME is set, it is the root directorry and contains the man directory
       if [[ -n $XTBHOME ]] ; then
+        debug "Old variable XTBHOME is set ($XTBHOME)."
         if [[ -d "$XTBHOME/man" ]] ; then
           xtb_manpath="$XTBHOME/man"
+          debug "Fallback xtb_manpath=$xtb_manpath"
         else 
           fatal "Manual directory '$XTBHOME/man' is missing."
         fi
@@ -115,6 +127,7 @@ display_howto ()
     fi
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
+  debug "$( declare -p MANPATH )"
 
   message "From version 6.0 onwards there is no HOWTO included, displaying man page instead."
 
@@ -345,8 +358,8 @@ add_to_MANPATH ()
 {
     [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
     [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
-    [[ :$MANPATH: =~ :$1: ]] || PATH="$1:$MANPATH"
-    debug "$PATH"
+    [[ :$MANPATH: =~ :$1: ]] || MANPATH="$1:$MANPATH"
+    debug "$MANPATH"
 }
 
 #
@@ -796,6 +809,7 @@ else
   # Add the manual path, even though we won't need it
   [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
   export XTBPATH PATH MANPATH
+  debug "$( declare -p XTBPATH PATH MANPATH )"
 fi
 
 # Check whether we have the right executable
