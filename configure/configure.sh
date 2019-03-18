@@ -17,6 +17,12 @@ warning ()
     return 1
 }
 
+fatal ()
+{
+    echo    "ERROR  :  $*" >&2
+    exit 1
+}
+
 debug ()
 {
     echo    "DEBUG   : $*" >&4
@@ -224,6 +230,13 @@ recover_rc ()
     if read_boolean ; then ask_installation_path ; fi
   fi
   debug "use_xtbhome=$use_xtbhome; use_xtbname=$use_xtbname"
+  if [[ -z $use_xtbname ]] ; then 
+    ask_callname
+  else
+    message "recovered setting 'xtb_callname=$use_xtbname'."
+    ask "Would you like to change these settings?"
+    if read_boolean ; then ask_callname ; fi
+  fi
 
   use_chatty="$stay_quiet"
   if [[ -z $use_chatty ]] ; then
@@ -256,20 +269,21 @@ recover_rc ()
   debug "use_interactivity=$use_interactivity"
 
   use_queue="$request_qsys"
-  use_bsub_project="$bsub_project"
+  # Try to recover old vrsion where it was bsub_project
+  use_qsys_project="${qsys_project:-$bsub_project}"
   if [[ -z $use_queue ]] ; then
     ask_qsys_details
   else
     message "Recovered queueing system setting 'request_qsys=$use_queue'."
-    if [[ ! -z $use_bsub_project ]] ; then 
-      message "Recovered project setting 'bsub_project=$bsub_project'."
+    if [[ -n $use_qsys_project ]] ; then 
+      message "Recovered project setting 'qsys_project=$use_qsys_project'."
       ask "Would you like to change these settings?"
     else
       ask "Would you like to change this setting?"
     fi
     if read_boolean ; then ask_qsys_details ; fi
   fi
-  debug "use_queue=$use_queue; use_bsub_project=$use_bsub_project"
+  debug "use_queue=$use_queue; use_qsys_project=$use_qsys_project"
 
   use_module_system="$use_modules"
   use_module_items=( "${load_modules[@]}" )
@@ -329,7 +343,7 @@ read_boolean ()
   pattern_true_false="[Tt]([Rr]([Uu][Ee]?)?)?|[Ff]([Aa]([Ll]([Ss][Ee]?)?)?)?"
   pattern_yes_no="[Yy]([Ee][Ss]?)?|[Nn][Oo]?"
   pattern="($pattern_true_false|$pattern_yes_no|0|1)"
-  until [[ $readvar =~ ^[[:space:]]*$pattern[[:space:]]*$ ]] ; do
+  until [[ $readvar =~ ^[[:space:]]*${pattern}[[:space:]]*$ ]] ; do
     message "Please enter t(rue)/y(es)/1 or f(alse)/n(o)/0."
     echo -n "Answer  : " >&3
     read -r readvar
@@ -397,6 +411,13 @@ ask_installation_path ()
   debug "use_xtbname=$use_xtbname"
 }
 
+ask_callname ()
+{
+  ask "What is the name of the xtb binary?"
+  use_xtbname="$(read_human_input)"
+  debug "use_xtbname=$use_xtbname"
+}
+
 ask_modules ()
 {
   ask "If a modular cluster management is available, do you want to use it?"
@@ -453,7 +474,7 @@ ask_interactivity ()
 
 ask_qsys_details ()
 {
-  message "Currently supported: pbs-gen, bsub-gen, bsub-rwth"
+  message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth, slurm-rwth"
   local test_queue
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
@@ -464,11 +485,17 @@ ask_qsys_details ()
     [Bb][Ss][Uu][Bb]* )
       use_queue="bsub-gen"
       ask "What project would you like to specify?"
-      use_bsub_project=$(read_human_input)
-      debug "use_bsub_project=$use_bsub_project"
+      use_qsys_project=$(read_human_input)
+      debug "use_qsys_project=$use_qsys_project"
+      ;;&
+    [Ss][Ll][Uu][Rr][Mm]* )
+      use_queue="slurm-gen"
+      ask "What project would you like to specify?"
+      use_qsys_project=$(read_human_input)
+      debug "use_qsys_project=$use_qsys_project"
       ;;&
     *[Rr][Ww][Tt][Hh] )
-      use_queue="bsub-rwth"
+      use_queue="${use_queue%-*}-rwth"
       ;;
     '' )
       : ;;
@@ -635,7 +662,7 @@ print_settings ()
   echo     "###"
 
   echo     "## Set default queueing system for which the script should be written"
-  echo     "## (pbs-gen, bsub-gen, or bsub-rwth [special case, see source])"
+  echo     "## (pbs-gen, bsub-gen, slurm-gen, or *-rwth [special cases, see source])"
   echo     "#  "
   if [[ -z $use_queue ]] ; then
     echo   "#  request_qsys=\"bsub-rwth\""
@@ -645,14 +672,14 @@ print_settings ()
   echo     "#  "
   echo     "###"
 
-  echo     "## If project options are enabled (e.g. for bsub-rwth), "
-  echo     "## set to which it should be accounted."
+  echo     "## If project/ account options are enabled (e.g. for bsub-rwth), "
+  echo     "## set the name to which it should be accounted to."
   echo     "## This can be overwritten with -P0 or -P default."
   echo     "#"
-  if [[ -z $use_bsub_project ]] ; then
-    echo   "#  bsub_project=\"default\""
+  if [[ -z $use_qsys_project ]] ; then
+    echo   "#  qsys_project=\"default\""
   else
-    echo   "   bsub_project=\"$use_bsub_project\""
+    echo   "   qsys_project=\"$use_qsys_project\""
   fi
   echo     "#  "
   echo     "###"
@@ -702,21 +729,25 @@ print_settings ()
 
 create_bin_link ()
 {
-    local link_target_path="$HOME/bin"
-    local link_target_name="runxtb"
-    local link_target="$link_target_path/$link_target_name"
+  local link_target_path="$HOME/bin"
+  local link_target_name link_target link_source
     
+  for link_target_name in "runxtb" "crest.prepare" ; do
+    link_target="$link_target_path/$link_target_name"
+    link_source="$runxtbrc_path/${link_target_name}.sh"
     if [[ -e "$link_target" ]] ; then
       debug "Link '$link_target' does already exist."
+      continue
     else
       ask "Would you like to create a symbolic link '$link_target'?"
       if read_boolean ; then
         [[ -r "$link_target_path" ]] || fatal "Cannot read '$link_target_path'."
         [[ -w "$link_target_path" ]] || fatal "Cannot write to '$link_target_path'."
-        [[ -x "$runxtbrc_path/runxtb.sh" ]] || fatal "Not executable: '$runxtbrc_path/runxtb.sh'."
-        message "$(ln -vs "$runxtbrc_path/runxtb.sh" "$link_target")"
+        [[ -x "$link_source" ]] || fatal "Not executable: '$link_source'."
+        message "$( ln -vs "$link_source" "$link_target" )"
       fi
     fi
+  done
 }
 
 #

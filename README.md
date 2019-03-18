@@ -91,8 +91,10 @@ The following script options are available:
               This also requires setting a queueing system with `-Q` (see below).
               (configuration option `run_interactive=sub`).
  * `-Q <ARG>` Set a queueing system for which the submitscript should be prepared.
-              Currently supported are `pbs-gen`, `bsub-gen`, and `bsub-rwth` 
+              Currently supported are `pbs-gen`, `slurm-gen`, `slurm-rwth`, `bsub-gen`, and `bsub-rwth` 
               (configuration option `request_qsys=<ARG>`).
+              The `*rwth` suffix will test a few more options and will set some constraints according to
+              the recommendations of the RWTH IT centre.
  * `-P <ARG>` Account to project `<ARG>`, which will also (currently) trigger
               `-Q bsub-rwth` to be set. It will not trigger `-s`/`-S`.
  * `-M`       Use preinstalled modules instead of paths. 
@@ -118,7 +120,8 @@ The following script options are available:
               If specified twice, it will also suppress warnings,
               if specified more than twice, it will suppress also errors.
  * `-h`       Prints a small help text and current configuration.
- * `-H`       Opens the `HOWTO` (manual) of the original distribution.
+ * `-H`       Retrieve the man page of xtb of the original distribution.
+ * `-X`       Retrieve the man page of xcontrol of the original distribution.
 
 ## Included files
 
@@ -128,16 +131,21 @@ The following files come with this script:
  * `runxtb.rc` An example set-up file.
  * `xtb.dummy` A tiny bash script only for testing. 
    This will only echo `<coord_file> [options]` verbatim.
+ * `crest.prepare.sh` A small script that creates a new directory 
+   with a suitable `coord` file to start a `crest` run.
  * `README.md` This file.
  * `configure` A directury containing a script to configure the wrapper.
 
 ## Exit status
 
-The script carries over the exit statusses of its dependencies.
+The script `runxtb` carries over the exit statusses of its dependencies.
 In interactive mode that is the exit status of `xtb`.
-In submission mode it is the exit status of `qsub` or `bsub`.
+In submission mode it is the exit status of `qsub`, `bsub`, or `sbatch`.
 In all other cases it will be `0` if everything went according to plan,
 or `1` if there was a problem.  
+The script `crest.prepare.sh` will exit with `0` if nothing went wrong 
+and a crest run can be started. If files are not present, or I/O operations
+fail it will exit with `1`.  
 The dummy script `xtb.dummy` always exits with `2`.
 
 ## Debug
@@ -154,4 +162,4 @@ please include the debug output when submitting a bug report to the
 [GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
 
-(Martin; 2019-02-14; wrapper version 0.2.1)
+(Martin; 2019-03-18; wrapper version 0.3.0)

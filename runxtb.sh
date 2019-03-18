@@ -48,7 +48,7 @@ fatal ()
 
 debug ()
 {
-    echo "DEBUG  : " "$*" >&4
+  echo "DEBUG  : (${FUNCNAME[1]})" "$*" >&4
 }    
 
 #
@@ -82,37 +82,52 @@ display_howto ()
     # Assume if there is no special configuration applied which sets the install directory
     # that the scriptdirectory is also the root directory of xtb
     XTBPATH="${xtb_install_root:-$scriptpath}"
-  fi
-  # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
-  local xtb_manpath xtbpath_munge
-  # Since XTBPATH must be set, parse that first for the manpath
-  if [[ -n $XTBPATH ]] ; then
-    while [[ ":${xtbpath_munge}:" =~ ^:([^:]+):(.*):$ ]] ; do 
-      [[ -d "${BASH_REMATCH[1]}/man" ]] || { xtbpath_munge="${BASH_REMATCH[2]}" ; continue ; }
-      xtb_manpath="${BASH_REMATCH[1]}/man"
-      break
-    done
-  else
-    warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
-    warning "Please check your installation."
-  fi 
-  # If no man directory is found along path, fallback to XTBHOME
-  if [[ -z $xtb_manpath ]] ; then
-    # Assume if XTBHOME is set, it is the root directorry and contains the man directory
-    if [[ -n $XTBHOME ]] ; then
-      if [[ -d "$XTBHOME/man" ]] ; then
-        xtb_manpath="$XTBHOME/man"
-      else 
-        fatal "Manual directory '$XTBHOME/man' is missing."
+    debug "Setting XTBPATH=$XTBPATH"
+    # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
+    local xtb_manpath xtbpath_munge
+    # Since XTBPATH must be set, parse that first for the manpath
+    if [[ -n $XTBPATH ]] ; then
+      xtbpath_munge="$XTBPATH"
+      local path_pattern="^:([^:]+):(.*)$"
+      debug "xtbpath_munge=$xtbpath_munge"
+      while [[ ":${xtbpath_munge}:" =~ $path_pattern ]] ; do 
+        debug "Pattern matched: ${BASH_REMATCH[0]}"
+        if [[ -d "${BASH_REMATCH[1]}/man" ]] ; then 
+          xtb_manpath="${BASH_REMATCH[1]}/man"
+          debug "Use xtb_manpath=$xtb_manpath"
+          break
+        else
+          xtbpath_munge="${BASH_REMATCH[2]}" 
+          debug "xtbpath_munge=$xtbpath_munge"
+          continue
+        fi
+      done
+    else
+      warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
+      warning "Please check your installation."
+    fi 
+    # If no man directory is found along path, fallback to XTBHOME
+    if [[ -z $xtb_manpath ]] ; then
+      debug "Could not identify xtb manual path."
+      # Assume if XTBHOME is set, it is the root directorry and contains the man directory
+      if [[ -n $XTBHOME ]] ; then
+        debug "Old variable XTBHOME is set ($XTBHOME)."
+        if [[ -d "$XTBHOME/man" ]] ; then
+          xtb_manpath="$XTBHOME/man"
+          debug "Fallback xtb_manpath=$xtb_manpath"
+        else 
+          fatal "Manual directory '$XTBHOME/man' is missing."
+        fi
+      else
+        fatal "The fallback environment variable 'XTBHOME' is unset."
       fi
     else
-      fatal "The fallback environment variable 'XTBHOME' is unset."
+      # Add the found directory to the manpath
+      add_to_MANPATH "$xtb_manpath"
     fi
-  else
-    # Add the found directory to the manpath
-    add_to_MANPATH "$xtb_manpath"
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
+  debug "$( declare -p MANPATH )"
 
   message "From version 6.0 onwards there is no HOWTO included, displaying man page instead."
 
@@ -122,16 +137,15 @@ display_howto ()
     exit 0
   else
     debug "No manpage available. Try fallback to HOWTO."
+    [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
+    local less_cmd
+    if less_cmd="$( command -v less 2> /dev/null )" ; then
+      "$less_cmd" "$XTBHOME/HOWTO"
+    else
+      cat "$XTBHOME/HOWTO"
+    fi
+    exit 0
   fi
-
-  [[ -e "$XTBHOME/HOWTO" ]] || fatal "Also cannot find 'HOWTO' of xTB."
-  local less_cmd
-  if less_cmd="$( command -v less 2> /dev/null )" ; then
-    "$less_cmd" "$XTBHOME/HOWTO"
-  else
-    cat "$XTBHOME/HOWTO"
-  fi
-  exit 0
 }
 
 expand_tilde_path ()
@@ -344,8 +358,8 @@ add_to_MANPATH ()
 {
     [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
     [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
-    [[ :$MANPATH: =~ :$1: ]] || PATH="$1:$MANPATH"
-    debug "$PATH"
+    [[ :$MANPATH: =~ :$1: ]] || MANPATH="$1:$MANPATH"
+    debug "$MANPATH"
 }
 
 #
@@ -420,6 +434,8 @@ write_submit_script ()
     backup_if_exists "$submitscript_filename"
     debug "Will write submitscript to: $submitscript"
 
+    local -a submit_commandline
+
     # Open file descriptor 9 for writing
     exec 9> "$submitscript_filename"
 
@@ -441,6 +457,7 @@ write_submit_script ()
 			#PBS -o $submitscript_filename.o\${PBS_JOBID%%.*}
 			#PBS -e $submitscript_filename.e\${PBS_JOBID%%.*}
 			EOF
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
     elif [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
       cat >&9 <<-EOF
 			#BSUB -n $requested_numCPU
@@ -452,19 +469,45 @@ write_submit_script ()
 			#BSUB -o $submitscript_filename.o%J
 			#BSUB -e $submitscript_filename.e%J
 			EOF
-      # If 'bsub_project' is empty, or '0', or 'default' (in any case, truncated after def)
+      # If 'qsys_project' is empty, or '0', or 'default' (in any case, truncated after def)
       # do not write this line to the script.
-      if [[ "$bsub_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+      if [[ "$qsys_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
         warning "No project selected."
       else
-        echo "#BSUB -P $bsub_project" >&9
+        echo "#BSUB -P $qsys_project" >&9
       fi
       #add some more specific setup for RWTH
-      if [[ "$queue" =~ [Bb][Ss][Uu][Bb]-[Rr][Ww][Tt][Hh] ]] ; then
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
         if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
           echo "#BSUB -R select[hpcwork]" >&9
         fi
       fi
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
+    elif [[ "$queue" =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
+      message "This is still a work in progress."
+      cat >&9 <<-EOF
+			#SBATCH --job-name='${submitscript_filename%.*}'
+			#SBATCH --output='$submitscript_filename.o%j'
+			#SBATCH --error='$submitscript_filename.e%j'
+			#SBATCH --nodes=1 
+			#SBATCH --ntasks=1
+			#SBATCH --cpus-per-task=$requested_numCPU
+			#SBATCH --mem-per-cpu=$(( corrected_memory / requested_numCPU ))
+			#SBATCH --time=${requested_walltime}
+			#SBATCH --mail-type=END,FAIL
+			EOF
+      if [[ "$qsys_project" =~ ^(|0|[Dd][Ee][Ff][Aa]?[Uu]?[Ll]?[Tt]?)$ ]] ; then
+        warning "No project selected."
+      else
+        echo "#SBATCH --account='$qsys_project'" >&9
+      fi
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
+        if [[ "$PWD" =~ [Hh][Pp][Cc] ]] ; then
+          echo "#SBATCH --constraint=hpcwork" >&9
+        fi
+        echo "#SBATCH --export=NONE" >&9
+      fi
+      submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
@@ -511,10 +554,12 @@ write_submit_script ()
 		export OMP_STACKSIZE="${requested_memory}m"  
 		ulimit -s unlimited || exit 1
 
+		exit_status=0
 		date
-		"$xtb_callname" ${xtb_commands[@]} > "$output_file" || { date ; exit 1 ; }
+		${submit_commandline[@]} > "$output_file" || exit_status=1 
 		date
 		[[ -e molden.input ]] && mv -v -- molden.input "${output_file%.*}.molden"
+		exit \$exit_status
 		
 		EOF
 
@@ -558,8 +603,8 @@ trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 #
 # Details about this script
 #
-version="0.2.1"
-versiondate="2019-02-14"
+version="0.3.0"
+versiondate="2019-03-18"
 
 #
 # Set some Defaults
@@ -571,7 +616,7 @@ requested_numCPU=4
 requested_memory=1000
 run_interactive="yes"
 request_qsys="pbs-gen"
-bsub_project="default"
+qsys_project="default"
 exit_status=0
 use_modules="false"
 declare -a load_modules
@@ -630,16 +675,17 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     S) 
       run_interactive="sub"
       ;;
-    #hlp   -Q <ARG> Select queueing system (pbs-gen, bsub-rwth)
+    #hlp   -Q <ARG> Select queueing system (Default: pbs-gen)
+    #hlp            Format: <queue>-<special>
+    #hlp            Recognised values for <queue>: pbs, bsub, slurm
+    #hlp            Recognised values for <special>: gen, rwth (no effect for pbs)
     Q)
       request_qsys="$OPTARG"
       ;;
-    #hlp   -P <ARG> Account to project <ARG>.
-    #hlp            This will automatically set '-Q bsub-rwth', too.
-    #hlp            (It will not trigger remote execution.)
+    #hlp   -P <ARG> Account to project (bsub) / account (slurm) <ARG>.
+    #hlp            The switch '-Q' has to be set appropriately.
     P) 
-      bsub_project="$OPTARG"
-      request_qsys="bsub-rwth"
+      qsys_project="$OPTARG"
       ;;
     #hlp   -M       Use modules instead of paths (work in progress).
     #hlp            Needs a specified modules list (set in rc).
@@ -653,7 +699,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            (Can also be set in the rc.)
     l)
       use_modules="true"
-      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]+(.*)$ ]] ; then
+      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
         unset load_modules
         [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
       else
@@ -713,7 +759,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   outputfile="$output_file"
     #hlp   run_interactive="$run_interactive"
     #hlp   request_qsys="$request_qsys"
-    #hlp   bsub_project="$bsub_project"
+    #hlp   qsys_project="$qsys_project"
     #hlp Platform information:
     #hlp   nodename="$nodename"
     #hlp   operatingsystem="$operatingsystem"
@@ -763,6 +809,7 @@ else
   # Add the manual path, even though we won't need it
   [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
   export XTBPATH PATH MANPATH
+  debug "$( declare -p XTBPATH PATH MANPATH )"
 fi
 
 # Check whether we have the right executable
@@ -803,6 +850,8 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
       submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"
+    elif [[ $request_qsys =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
+      submit_id="$(sbatch "$submitscript" )" || exit_status="$?"
     else
       fatal "Unrecognised queueing system '$request_qsys'."
     fi
