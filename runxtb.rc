@@ -9,9 +9,9 @@
 #
    requested_memory=1000
 
-## Set installation directory (not including the executable).
+## Set installation directory (not including the bin directory and the executable name).
 #
-#  xtb_install_root="/path/to/xtb"
+#  xtb_install_root="/path/to/xtb/root"
    xtb_install_root=""
 #
 ## Set the name of the executable.
@@ -77,4 +77,4 @@
    requested_walltime="24:00:00"
 
 #
-## End of example .runxtbrc (2019-02-26)
+## End of example .runxtbrc (2019-03-18)

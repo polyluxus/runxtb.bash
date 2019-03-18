@@ -162,4 +162,4 @@ please include the debug output when submitting a bug report to the
 [GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
 
-(Martin; 2019-02-26; wrapper version 0.3.0_alpha2)
+(Martin; 2019-03-18; wrapper version 0.3.0)
