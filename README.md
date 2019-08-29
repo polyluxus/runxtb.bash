@@ -16,25 +16,19 @@ Additionally it can be used to create scripts to submit it to a queueing system.
 
 ## Installation
 
-The simplest way to install it is to copy it to the same directory as the 
-program, and use a symbolic link for execution, e.g. in `~/bin`.
-There is - in principle - no need to configure it.
-(I would not recommend that version anymore.)   
-You can also use it from any directory, if you set the path to the
-executable manually on the command line (see below).  
-Lastly, and my personally preferred way, is to clone the git repository 
-and configure the script.
+My personally preferred way to install it, is to clone the git repository 
+(or download the source code) and configure the script.
 There is a configure script, which will prompt for the values 
 with a short description.
 It will also try to recover values from a previous configuration
 in the same locations as outlined below.
-I recommend deleting old configuration files before updating to version 0.2.0 of this script.
+I recommend deleting old configuration files before updating to version > 0.2.0 of this script.
 
 The wrapper script will first look for a file `.runxtbrc`, 
 then for a file `runxtb.rc` (example included), 
 in directories of the following order:
 `scriptpath`, `/home/$USER`, `/home/$USER/.config`, and `$PWD`.
-If `.runxtbrc` is found, it won't look for `runxtb.rc`.
+If a `.runxtbrc` is found, it will skip `runxtb.rc`.
 The last file found will be used to set the (local) default parameters. 
 This gives the possibility that every user may configure local settings,
 it also gives the possibilities to overwrite settings for one directory only.
@@ -42,6 +36,12 @@ A summary of the settings to be used are given with the `-h` option.
 
 This directory is currently set up to find `runxtb.rc` and should test 
 sucessfully without any changes.
+
+There used to be a way to install thes script alongside with the executable of xtb, 
+without further need to configure it, and place a symbolic link to it
+in a directory included in `PATH`, e.g. in `~/bin`.
+I have not tested this set-up for a long time, so I am not sure if the recent edits have broken it.
+(I would not recommend trying it.)   
 
 ## Updating
 
@@ -134,7 +134,8 @@ The following files come with this script:
  * `crest.prepare.sh` A small script that creates a new directory 
    with a suitable `coord` file to start a `crest` run.
  * `README.md` This file.
- * `configure` A directury containing a script to configure the wrapper.
+ * `configure` A directory containing a script to configure the wrapper.
+ * `guides` A directory with markup-formatted file(s), which can be used as tutorials.
 
 ## Exit status
 
@@ -142,7 +143,7 @@ The script `runxtb` carries over the exit statusses of its dependencies.
 In interactive mode that is the exit status of `xtb`.
 In submission mode it is the exit status of `qsub`, `bsub`, or `sbatch`.
 In all other cases it will be `0` if everything went according to plan,
-or `1` if there was a problem.  
+or `1` if there was a problem within the script.  
 The script `crest.prepare.sh` will exit with `0` if nothing went wrong 
 and a crest run can be started. If files are not present, or I/O operations
 fail it will exit with `1`.  
@@ -162,4 +163,4 @@ please include the debug output when submitting a bug report to the
 [GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
 
-(Martin; 2019-03-18; wrapper version 0.3.0)
+(Martin; 2019-08-xx; wrapper version 0.3.1.dev)
