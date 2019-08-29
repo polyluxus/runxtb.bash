@@ -81,6 +81,103 @@ backup_if_exists ()
   message "Create backup: $( mv -v -- "$move_source" "$move_target" 2>&1 )" || return 1
 }
 
+# Auxiliary function to do what the bash usually does by itself 
+expand_tilde_path ()
+{
+  local test_string="$1" return_string
+  # Tilde does not expand like a variable, this might lead to files not being found
+  # The regex is trying to exclude special meanings of '~+' and '~-'
+  if [[ $test_string =~ ^~([^/+-]*)/(.*)$ ]] ; then
+    debug "Expandinging tilde, match: ${BASH_REMATCH[0]}"
+    if [[ -z ${BASH_REMATCH[1]} ]] ; then
+      # If the tilde is followed by a slash it expands to the users home
+      return_string="$HOME/${BASH_REMATCH[2]}"
+    else
+      # If the tilde is followed by a string, it expands to another user's home
+      return_string="/home/${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    fi
+    debug "Expanded tilde to '$return_string'."
+  else
+    return_string="$test_string"
+  fi
+  echo "$return_string"
+}
+
+# Resolve the directory where the script is located (necessary to load rc and aux files)
+get_bindir ()
+{
+  # Resolves the absolute location of parameter and returns it
+  # partially taken from https://stackoverflow.com/a/246128/3180795
+  local resolve_file="$1" description="$2" 
+  local link_target directory_name resolve_dir_name
+  debug "Getting directory for '$resolve_file'."
+  resolve_file=$( expand_tilde_path "$resolve_file" )
+
+  # resolve $resolve_file until it is no longer a symlink
+  while [[ -h "$resolve_file" ]] ; do 
+    link_target="$( readlink "$resolve_file" )"
+    if [[ $link_target == /* ]]; then
+      debug "File '$resolve_file' is an absolute symlink to '$link_target'"
+      resolve_file="$link_target"
+    else
+      directory_name="$( dirname "$resolve_file" )" 
+      debug "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
+      #  If $resolve_file was a relative symlink, we need to resolve 
+      #+ it relative to the path where the symlink file was located
+      resolve_file="$directory_name/$link_target"
+    fi
+  done
+  debug "File is '$resolve_file'" 
+  resolve_dir_name="$( dirname "$resolve_file")"
+  directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
+  if [[ "$directory_name" != "$resolve_dir_name" ]] ; then
+    debug "$description '$directory_name' resolves to '$directory_name'"
+  fi
+  debug "$description is '$directory_name'"
+  if [[ -z $directory_name ]] ; then
+    echo "."
+  else
+    echo "$directory_name"
+  fi
+}
+
+#
+# Get settings from configuration file
+#
+
+test_rc_file ()
+{
+  local test_runxtbrc="$1"
+  debug "Testing '$test_runxtbrc' ..."
+  if [[ -f "$test_runxtbrc" && -r "$test_runxtbrc" ]] ; then
+    echo "$test_runxtbrc"
+    return 0
+  else
+    debug "... missing."
+    return 1
+  fi
+}
+
+get_rc ()
+{
+  local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
+  while [[ -n $1 ]] ; do
+    test_runxtbrc_dir="$1"
+    shift
+    if test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/.runxtbrc" )" ; then
+      return_runxtbrc_loc="$test_runxtbrc_loc" 
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
+    elif test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/runxtb.rc" )" ; then 
+      return_runxtbrc_loc="$test_runxtbrc_loc"
+      debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
+      continue
+    fi
+  done
+  debug "(returned) return_runxtbrc_loc=$return_runxtbrc_loc"
+  echo "$return_runxtbrc_loc"
+}
+
 ###
 #
 # MAIN
@@ -97,9 +194,35 @@ else
   exec 4> /dev/null
 fi
 
+# Default verbosity
+stay_quiet="0"
+
+#
+# Details about this script to be read from external files
+#
+
+# Where this script is located: 
+scriptpath="$( get_bindir "$0" "Directory of runxtb" )"
+# there should be a file with versioning information
+# shellcheck source=./VERSION
+[[ -r "$scriptpath/VERSION" ]] && . "$scriptpath/VERSION"
+version="${version:-unspecified}"
+versiondate="${versiondate:-unspecified}"
+debug "Version ${version} from ${versiondate}."
+
+runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD")"
+debug "runxtbrc_loc=$runxtbrc_loc"
+
+if [[ -n $runxtbrc_loc ]] ; then
+  # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+  . "$runxtbrc_loc"
+  message "Configuration file '$runxtbrc_loc' applied."
+else
+  debug "No configuration file found."
+fi
+
 
 # Initialise Variables
-stay_quiet="0"
 OPTIND=1
 
 while getopts :d:qh options ; do
