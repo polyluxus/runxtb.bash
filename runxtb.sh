@@ -8,7 +8,7 @@
 #hlp   '.bashrc', '.profile', etc.
 #hlp  
 #hlp USAGE:
-#hlp   runxtb.sh [script options] <coord_file> [xtb options]
+#hlp   ${0##*/} [script options] -- <coord_file> [xtb options]
 #hlp 
 
 #
@@ -18,37 +18,38 @@
 
 message ()
 {
-    if (( stay_quiet <= 0 )) ; then
-      echo "INFO   : " "$*" >&3
-    else
-      debug "(info   ) " "$*"
-    fi
+  if (( stay_quiet <= 0 )) ; then
+    echo "INFO   : $*" >&3
+  else
+    debug "(info   ) $*"
+  fi
 }
 
 warning ()
 {
-    if (( stay_quiet <= 1 )) ; then
-      echo "WARNING: " "$*" >&2
-    else
-      debug "(warning) " "$*"
-    fi
-    return 1
+  if (( stay_quiet <= 1 )) ; then
+    echo "WARNING: $*" >&2
+  else
+    debug "(warning) $*"
+  fi
+  return 1
 }
 
 fatal ()
 {
-    exit_status=1
-    if (( stay_quiet <= 2 )) ; then 
-      echo "ERROR  : " "$*" >&2
-    else
-      debug "(error  ) " "$*"
-    fi
-    exit "$exit_status"
+  exit_status=1
+  if (( stay_quiet <= 2 )) ; then 
+    echo "ERROR  : $*" >&2
+  else
+    debug "(error  ) $*"
+  fi
+  exit "$exit_status"
 }
 
 debug ()
 {
-  echo "DEBUG  : (${FUNCNAME[1]})" "$*" >&4
+  # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
+  echo "DEBUG  : (${FUNCNAME[1]}) $*" >&4
 }    
 
 #
@@ -812,6 +813,9 @@ else
   else
     fatal "Cannot locate bin directory in '$XTBPATH'."
   fi
+  # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
+  [[ -d "${XTBPATH}/python" ]] && add_to_PATH "${XTBPATH}/python"
+  [[ -d "${XTBPATH}/scripts" ]] && add_to_PATH "${XTBPATH}/scripts"
   # Add the manual path, even though we won't need it
   [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
   export XTBPATH PATH MANPATH
@@ -892,6 +896,6 @@ else
   fatal "Unrecognised mode '$run_interactive'; abort."
 fi
 
-#cleanup_and_quit
+# cleanup_and_quit is done via an exit trap
 #hlp ===== End of Script ===== (Martin, $version, $versiondate)
 
