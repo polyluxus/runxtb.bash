@@ -8,7 +8,7 @@
 #hlp   Script requires Open Babel.
 #hlp  
 #hlp USAGE:
-#hlp   ${0##*} [script options] 
+#hlp   ${0##*/} [script options] 
 #hlp 
 
 #
@@ -18,37 +18,38 @@
 
 message ()
 {
-    if (( stay_quiet <= 0 )) ; then
-      echo "INFO   : " "$*" >&3
-    else
-      debug "(info   ) " "$*"
-    fi
+  if (( stay_quiet <= 0 )) ; then
+    echo "INFO   : $*" >&3
+  else
+    debug "(info   ) $*"
+  fi
 }
 
 warning ()
 {
-    if (( stay_quiet <= 1 )) ; then
-      echo "WARNING: " "$*" >&2
-    else
-      debug "(warning) " "$*"
-    fi
-    return 1
+  if (( stay_quiet <= 1 )) ; then
+    echo "WARNING: $*" >&2
+  else
+    debug "(warning) $*"
+  fi
+  return 1
 }
 
 fatal ()
 {
-    exit_status=1
-    if (( stay_quiet <= 2 )) ; then 
-      echo "ERROR  : " "$*" >&2
-    else
-      debug "(error  ) " "$*"
-    fi
-    exit "$exit_status"
+  exit_status=1
+  if (( stay_quiet <= 2 )) ; then 
+    echo "ERROR  : $*" >&2
+  else
+    debug "(error  ) $*"
+  fi
+  exit "$exit_status"
 }
 
 debug ()
 {
-  echo "DEBUG  : (${FUNCNAME[1]})" "$*" >&4
+  # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
+  echo "DEBUG  : (${FUNCNAME[1]}) $*" >&4
 }    
 
 #
@@ -255,35 +256,49 @@ while getopts :d:qh options ; do
   esac
 done
 
+# Set a default target, if none was provided
 crest_dir="${crest_dir:-crest}"
 if [[  "$crest_dir" != '.' ]] ; then
+  # If the directory is not pwd, then check if it exists (as existing directories cannot be created)
   [[ -d "$crest_dir" ]] && fatal "Directory exists: $crest_dir"
   message "$( mkdir -v -- "$crest_dir" )" || fatal "Failed to create '$crest_dir'."
 else
+  # The pwd is the target directory, treat it like a newly created one
   debug "Target directory is '$crest_dir'."
 fi
 
+# Check for structure files
 if [[ -r "xtbopt.xyz" ]] ; then
-  obabel_cmd="$( command -v obabel )" || fatal "Command not found: obabel"
+  # Convert the coordinates from an xtb optimisation from xmol to tmol format with Open Babel
+  # Copy the new structure file to the crest directory (it is no longer necessary to be named coord, but that is still the default)
+  # Check for the dependency, allow for it to be set in the rc settings
+  obabel_cmd="${obabel_cmd:-obabel}"
+  obabel_cmd_found="$( command -v "$obabel_cmd" )" || fatal "Command not found: $obabel_cmd"
   backup_if_exists "$crest_dir/coord"
-  message "$( "$obabel_cmd" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
+  message "$( "$obabel_cmd_found" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
 elif [[ -r "xtbopt.coord" ]] ; then
-  message "Found optimised molecular structure in turbomole format."
+  # Copy the found optimised structure (in tmol format) to the crest directory
+  message "Found optimised molecular structure in Turbomole format."
   backup_if_exists "$crest_dir/coord"
   message "$( cp -v -- "xtbopt.coord" "$crest_dir/coord" )"
 else
   warning "No optimised molecular structure found in current directory."
-  for structure_file in "coord" *.xyz ; do
+  # Look for other structure files
+  for structure_file in "coord" *.coord *.xyz ; do
     if [[ -r "$structure_file" ]] ; then
-      message "Will use molecular structure in '$structure_file' instead."
+      message "Found '$structure_file' and will use this molecular structure instead."
+      message "It is recommended to preoptimise the molecular structure with xtb at the same level"
+      message "as the conformational search with crest shall be conducted, as it will be used as a reference for sanity checks."
       if [[ "$structure_file" == "coord" ]] ; then
+        # If the crest directory is pwd, and a 'coord' file exists, there is nothing left to prepare
         [[ "$crest_dir" == '.' ]] && fatal "'$structure_file' and '$crest_dir/coord' are the same file."
         message "$( cp -v -- "$structure_file" "$crest_dir/coord" )"
         break
       else
-        obabel_cmd="$( command -v obabel )" || fatal "Command not found: obabel"
+        obabel_cmd="${obabel_cmd:-obabel}"
+        obabel_cmd_found="$( command -v "$obabel_cmd" )" || fatal "Command not found: $obabel_cmd"
         backup_if_exists "$crest_dir/coord"
-        message "$( "$obabel_cmd" -ixyz "$structure_file" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
+        message "$( "$obabel_cmd_found" -ixyz "$structure_file" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
         break
       fi
     fi
@@ -299,5 +314,7 @@ if [[ -r ".CHRG" ]] ; then
 fi
 
 debug "Content of created directory: $( ls -lah "$crest_dir" )"
-message "All Done: ${0##*/}."
+message "All Done: ${0##*/} (part of runxtb.bash $version, $versiondate)"
 
+#hlp 
+#hlp This script is part of runxtb.bash ($version, $versiondate).
