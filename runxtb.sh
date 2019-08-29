@@ -601,12 +601,6 @@ debug "Writing errors to temporary file '$tmpfile'."
 trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
 #
-# Details about this script
-#
-version="0.3.0"
-versiondate="2019-03-18"
-
-#
 # Set some Defaults
 #
 
@@ -625,7 +619,19 @@ declare -a load_modules
 stay_quiet=0
 ignore_empty_commandline=false
 
+#
+# Details about this script to be read from external files
+#
+
+# Where this script is located: 
 scriptpath="$( get_bindir "$0" "Directory of runxtb" )"
+# there should be a file with versioning information
+# shellcheck source=./VERSION
+[[ -r "$scriptpath/VERSION" ]] && . "$scriptpath/VERSION"
+version="${version:-unspecified}"
+versiondate="${versiondate:-unspecified}"
+debug "Version ${version} from ${versiondate}."
+
 runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD")"
 debug "runxtbrc_loc=$runxtbrc_loc"
 
