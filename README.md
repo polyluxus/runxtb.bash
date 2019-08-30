@@ -75,12 +75,15 @@ The following script options are available:
  * `-m <ARG>` Secify the memory to be used (in megabyte).
               This will set `OMP_STACKSIZE=<ARG>`. (Default in the script is `1000`.)
  * `-o <ARG>` Trap the output (without errors) of `xtb` into a file called `<ARG>`.
-              In non-interactive mode it will be derived from the first argument given
-              after the options, which should be `coord_file`, or if it is not a file,
-              from the parent working directory.
-              The automatic generation of the file name is the default, 
-              but it can be also be triggered with `-o ''` (space is important), `-o0`, or `-o auto`.
-              To send the output stream to standad output, settings can be overwritten
+              The default behaviour in non-interactive mode is to guess the filename:
+              If the first argument given after the script options is a readable file,
+              i.e. a `coord_file` or `coords.xyz`, the job- and output-name will be based on that.
+              If the executed program is not `xtb` (`-C` switch), it will be based on that.
+              As fallback it will be derived from the parent working directory.
+              If necessary, the automatic generation of the file name can be also be triggered 
+              with `-o ''` (space is important), `-o0`, or `-o auto`.
+              This may be useful to overwrite any previous settings.
+              To send the output stream to standad output, e.g. the terminal, settings can be overwritten
               with `-c stdout`, or `-c -`.
               (configuration option `output_file='',0,auto|stdout,-`)
  * `-s`       Write a submitscript instead of interactive execution (PBS is default).

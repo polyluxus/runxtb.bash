@@ -239,22 +239,73 @@ is_integer()
 
 validate_integer ()
 {
-    if ! is_integer "$1"; then
-        [ ! -z "$2" ] && fatal "Value for $2 ($1) is no integer."
-          [ -z "$2" ] && fatal "Value '$1' is no integer."
-    fi
+  if ! is_integer "$1"; then
+    [ -n "$2" ] && fatal "Value for $2 ($1) is no integer."
+    [ -z "$2" ] && fatal "Value '$1' is no integer."
+  fi
 }
 
-validate_walltime ()
+# 
+# Test whether a given walltime is in the correct format
+#
+# Imported from https://github.com/polyluxus/tools-for-g16.bash
+
+reformat_suffixed_duration_or_exit ()
+{
+  local check_duration="$1"
+  local pattern_value="[[:digit:]]+"
+  local pattern_suffix="[DdHhMm]"
+  local pattern="^[[:space:]]*($pattern_value)($pattern_suffix)[[:space:]]*"
+  if [[ "$check_duration" =~ $pattern ]] ; then
+    local value="${BASH_REMATCH[1]}"
+    local unit="${BASH_REMATCH[2]}"
+  else
+    debug "Duration format is not suffixed: $check_duration."
+    echo "$check_duration"
+    return 1
+  fi
+  local return_duration
+  case $unit in
+    [Dd])
+      debug "Recognised days: unit=$unit."
+      return_duration="$(( value * 24 )):00:00"
+      ;;
+    [Hh])
+      debug "Recognised hours: unit=$unit."
+      return_duration="${value}:00:00"
+      ;;
+    [Mm])
+      debug "Recognised minutes: unit=$unit."
+      return_duration="${value}:00"
+      ;;
+    *)
+      debug "Unrecognised case: unit=$unit."
+      ;;
+  esac
+  echo "$return_duration"
+  return 0
+}
+
+format_duration ()
 {
     local check_duration="$1"
+    # First check whether the duration has a suffix
+    if check_duration="$(reformat_suffixed_duration_or_exit "$check_duration")" ; then
+      debug "Found suffixed value, reformatted to '$check_duration'."
+    else
+      debug "No suffixed value: $check_duration"
+    fi
+
     # Split time in HH:MM:SS
     # Strips away anything up to and including the rightmost colon
     # strips nothing if no colon present
     # and tests if the value is numeric
     # this is assigned to seconds
     local trunc_duration_seconds=${check_duration##*:}
-    validate_integer "$trunc_duration_seconds" "seconds"
+    if ! is_integer "$trunc_duration_seconds" ; then
+      warning "Value for seconds ($trunc_duration_seconds) is no positive integer."
+      return 1
+    fi
     # If successful value is stored for later assembly
     #
     # Check if the value is given in seconds
@@ -267,7 +318,10 @@ validate_walltime ()
         # this is assigned as minutes
         # and tests if the value is numeric
         local trunc_duration_minutes=${check_duration##*:}
-        validate_integer "$trunc_duration_minutes" "minutes"
+        if ! is_integer "$trunc_duration_minutes" ; then
+          warning "Value for minutes ($trunc_duration_minutes) is no positive integer."
+          return 1
+        fi
         # If successful value is stored for later assembly
         #
         # Check if value was given as MM:SS same procedure as above
@@ -278,10 +332,14 @@ validate_walltime ()
             # this is assigned as hours
             # and tests if the value is numeric
             local trunc_duration_hours=${check_duration##*:}
-            validate_integer "$trunc_duration_hours" "hours"
+            if ! is_integer "$trunc_duration_hours" ; then
+              warning "Value for hours ($trunc_duration_hours) is no positive integer."
+              return 1
+            fi
             # Check if value was given as HH:MM:SS if not, then exit
             if [[ ! "$check_duration" == "${check_duration%:*}" ]]; then
-                fatal "Unrecognised duration format."
+              warning "Unrecognised duration format."
+              return 1
             fi
         fi
     fi
@@ -297,8 +355,9 @@ validate_walltime ()
     # add any multiple of 60 minutes to the hours given as input
     local final_duration_hours=$((trunc_duration_hours + trunc_duration_minutes / 60))
 
-    # Format string and save on variable
-    printf "%d:%02d:%02d" $final_duration_hours $final_duration_minutes $final_duration_seconds
+    # Format string and print it
+    printf "%d:%02d:%02d" "$final_duration_hours" "$final_duration_minutes" \
+                          "$final_duration_seconds"
 }
 
 # 
@@ -531,7 +590,7 @@ write_submit_script ()
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
-      # Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
+			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
 			module load ${load_modules[*]} 2>&1 || exit 1
 			# Redirect because otherwise it would go to the error output, which might be bad
@@ -663,11 +722,20 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       requested_memory="${OPTARG}"
       ;;
     #hlp   -w <ARG> Set the walltime when sent to the queue
+    #hlp            The colon separated format [[HH:]MM:]SS is supported,
+    #hlp            as well as suffixing an integer value with d/h/m (days/hours/minutes).
+    #hlp            These two input formats cannot be combined;
+    #hlp            a purely numeric value will be taken as seconds (the suffix 's' is illegal).
     w)
-      requested_walltime=$( validate_walltime "$OPTARG" )
+      if requested_walltime="$(format_duration "$OPTARG")" ; then 
+        debug "Reformatted walltime duration to '$requested_walltime'."
+      else
+        fatal "Encountered error setting the walltime. Abort."
+      fi
       ;;
     #hlp   -o <ARG> Trap the output into a file called <ARG>.
-    #hlp            For the values '', '0', 'auto' the script will guess.
+    #hlp            For the values '', '0', 'auto' the script will guess,
+    #hlp            and either derive it from the coordinate file given, or from the program name.
     #hlp            Use 'stdout', '-' to send output to standard out.
     o) 
       output_file="$OPTARG"
@@ -778,12 +846,16 @@ done
 shift $(( OPTIND - 1 ))
 
 # Assume jobname from name of coordinate file, cut xyz (if exists)
+# Alternatively use the call name if it is not xtb
+# As a failsave, use the directory name
 if [[ -r $1 ]] ; then
   jobname="${1%.xyz}"
-  debug "Guessed jobname is '$jobname'."
+elif [[ "$xtb_callname" != "xtb" ]] ; then
+  jobname="$xtb_callname"
 else
   jobname="${PWD##*/}"
 fi
+debug "Guessed jobname is '$jobname'."
 
 # Store everything that should be passed to xtb
 xtb_commands=("$@")

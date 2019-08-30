@@ -99,13 +99,18 @@ However, there is absolutely no guarantee for correctness.
    ```
    runxtb -S -C crest -- -tautomerize -gbsa <SOLVENT> -chrg <INT> -uhf <INT>
    ```
-   This step is still quite fast and submission probably not necessary.
+   Since the jobname is derived from the executed program (or a file, if specified), 
+   the output of this part will be written to `crest.runxtb.out`.
+   This step is still quite fast and submission is (probably) not necessary.
    If you find some tautomers, then you may want to calculate a spectrum for each of them.
 
-4. Generate CRE (if you did 3, this will [currently] overwrite your output file).
+4. Generate CRE.
    ```
    runxtb -S -C crest -- -nmr -gbsa <SOLVENT> -chrg <INT> -uhf <INT>
-   ```
+   ``` 
+   The output of this step will also write to `crest.runxtb.out`.
+   If you looked for tautomers (step 3), then you might want to rename that output file,
+   but it will be backed up in any case.
 
 5. Run the enso script to get your settings.  
    You will need either `$HOME/.ensorc` or `./.ensorc` for this.
@@ -115,19 +120,28 @@ However, there is absolutely no guarantee for correctness.
    This is very fast and doesn't need submission. 
    The output should go to the terminal, so you can check it easily.
 
-6. Most of the times the default (you chose them in the rc file) settings are ok,
-   if not edit the `flags.dat` to your liking.
+6. Most of the times the default settings, which you chose them in rc file, are already what you want.
+   If you want to deviate from the defaults you have set, e.g. change a basis set, or turn off a part,
+   you can now edit the `flags.dat` to make these changes.
 
-7. Run enso. This will take time, as multiple calculations will be performed with Orca or Turbomole.
-   This step also needs more memory than any of the others, I recommend at least 1 GB per cpu,
+7. Run enso. This will take time. Multiple calculations will be performed with Orca or Turbomole.
+   This step also needs (much) more memory than any of the others.
+   There is a small caveat with using Orca:
+   In the enso script the value for maxcore value is hard-coded to be 8000 MB 
+   (see also the [Orca Input Library](https://sites.google.com/site/orcainputlibrary/orca-common-problems)).
+   In case of the rwth0425 installation, I have changed it to 4000 MB, which should suffice for most applications.
+   Given sufficient overhead for Orca, I recommend at least 5 GB *per cpu* (better would be 5.5 GB),
    which you can set with the `-m` switch to the runxtb script.
-   I am using the Orca interface, and it worked from the command line. 
-   However, since Orca uses MPI, the job script must be edited (see below).
+   The value for maxcore in case of Turbomole can be set in the `.cefinerc`.
+   Depending on the number of conformers to be treated, you should adjust the requested walltime (`-w` switch).  
+   I am using the Orca interface, and it worked well from the command line. 
+   However, since Orca uses MPI, the job script created by runxtb must be edited (see below).
    I tried Turbomole, but couldn't make that work because of solvation in step 3.  
-   This is a workaround for Orca (for now). Create a script, but do not submit it (`-s`):
+   This is a workaround for Orca (for now). Create a script, but do not submit it (`-s` switch):
    ```
-   runxtb -s -m <INT> -o enso.runxtb.out -C enso -- -run
+   runxtb -s -m <INT> -w <HH:MM:SS> -C enso -- -run
    ```
+   The output of this part will be written to `enso.runxtb.out`.  
    Now switch the values for tasks an cpus:
    ```
    --ntasks=<INT>           (was)   --ntasks=1
@@ -150,11 +164,12 @@ However, there is absolutely no guarantee for correctness.
    get an interactive session with `salloc` and run everything interactively.)
 
 8. Run the NMR program. You probably have to specify the measuring frequency (`-mf <INT>`).
-   This should also be very quick.
+   This should also be very quick; there is no need for batch submission.
    ```
-   runxtb -o anmr.runxtb.out -C anmr -- -mf <INT>
+   runxtb -C anmr -- -mf <INT>
    ```
-   This should create `anmr.dat` for the next step.
+   The output will be written to `anmr.runxtb.out`, 
+   and the program should create the file `anmr.dat` for the next step.
 
 9. Plot the spectrum, which is also quick.
    ```
@@ -198,4 +213,4 @@ Make modifications as appropriate.
 
 ---
 
-This guide was last updated: 2019-08-29.
+This guide was last updated: 2019-08-30.
