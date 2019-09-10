@@ -16,25 +16,19 @@ Additionally it can be used to create scripts to submit it to a queueing system.
 
 ## Installation
 
-The simplest way to install it is to copy it to the same directory as the 
-program, and use a symbolic link for execution, e.g. in `~/bin`.
-There is - in principle - no need to configure it.
-(I would not recommend that version anymore.)   
-You can also use it from any directory, if you set the path to the
-executable manually on the command line (see below).  
-Lastly, and my personally preferred way, is to clone the git repository 
-and configure the script.
+My personally preferred way to install it, is to clone the git repository 
+(or download the source code) and configure the script.
 There is a configure script, which will prompt for the values 
 with a short description.
 It will also try to recover values from a previous configuration
 in the same locations as outlined below.
-I recommend deleting old configuration files before updating to version 0.2.0 of this script.
+I recommend deleting old configuration files before updating to version > 0.2.0 of this script.
 
 The wrapper script will first look for a file `.runxtbrc`, 
 then for a file `runxtb.rc` (example included), 
 in directories of the following order:
 `scriptpath`, `/home/$USER`, `/home/$USER/.config`, and `$PWD`.
-If `.runxtbrc` is found, it won't look for `runxtb.rc`.
+If a `.runxtbrc` is found, it will skip `runxtb.rc`.
 The last file found will be used to set the (local) default parameters. 
 This gives the possibility that every user may configure local settings,
 it also gives the possibilities to overwrite settings for one directory only.
@@ -42,6 +36,12 @@ A summary of the settings to be used are given with the `-h` option.
 
 This directory is currently set up to find `runxtb.rc` and should test 
 sucessfully without any changes.
+
+There used to be a way to install thes script alongside with the executable of xtb, 
+without further need to configure it, and place a symbolic link to it
+in a directory included in `PATH`, e.g. in `~/bin`.
+I have not tested this set-up for a long time, so I am not sure if the recent edits have broken it.
+(I would not recommend trying it.)   
 
 ## Updating
 
@@ -75,12 +75,15 @@ The following script options are available:
  * `-m <ARG>` Secify the memory to be used (in megabyte).
               This will set `OMP_STACKSIZE=<ARG>`. (Default in the script is `1000`.)
  * `-o <ARG>` Trap the output (without errors) of `xtb` into a file called `<ARG>`.
-              In non-interactive mode it will be derived from the first argument given
-              after the options, which should be `coord_file`, or if it is not a file,
-              from the parent working directory.
-              The automatic generation of the file name is the default, 
-              but it can be also be triggered with `-o ''` (space is important), `-o0`, or `-o auto`.
-              To send the output stream to standad output, settings can be overwritten
+              The default behaviour in non-interactive mode is to guess the filename:
+              If the first argument given after the script options is a readable file,
+              i.e. a `coord_file` or `coords.xyz`, the job- and output-name will be based on that.
+              If the executed program is not `xtb` (`-C` switch), it will be based on that.
+              As fallback it will be derived from the parent working directory.
+              If necessary, the automatic generation of the file name can be also be triggered 
+              with `-o ''` (space is important), `-o0`, or `-o auto`.
+              This may be useful to overwrite any previous settings.
+              To send the output stream to standad output, e.g. the terminal, settings can be overwritten
               with `-c stdout`, or `-c -`.
               (configuration option `output_file='',0,auto|stdout,-`)
  * `-s`       Write a submitscript instead of interactive execution (PBS is default).
@@ -134,7 +137,8 @@ The following files come with this script:
  * `crest.prepare.sh` A small script that creates a new directory 
    with a suitable `coord` file to start a `crest` run.
  * `README.md` This file.
- * `configure` A directury containing a script to configure the wrapper.
+ * `configure` A directory containing a script to configure the wrapper.
+ * `guides` A directory with markup-formatted file(s), which can be used as tutorials.
 
 ## Exit status
 
@@ -142,7 +146,7 @@ The script `runxtb` carries over the exit statusses of its dependencies.
 In interactive mode that is the exit status of `xtb`.
 In submission mode it is the exit status of `qsub`, `bsub`, or `sbatch`.
 In all other cases it will be `0` if everything went according to plan,
-or `1` if there was a problem.  
+or `1` if there was a problem within the script.  
 The script `crest.prepare.sh` will exit with `0` if nothing went wrong 
 and a crest run can be started. If files are not present, or I/O operations
 fail it will exit with `1`.  
@@ -161,5 +165,24 @@ If you find anything not going as expected,
 please include the debug output when submitting a bug report to the
 [GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
+## License (GNU General Public License v3.0)
 
-(Martin; 2019-03-18; wrapper version 0.3.0)
+runxtb.bash - a wrapper script for xtb
+Copyright (C) 2019 Martin C Schwarzer
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+See [LICENSE](LICENSE) to see the full text.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+(Martin; 2019-09-10; wrapper version 0.3.1)
