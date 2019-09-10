@@ -185,4 +185,4 @@ See [LICENSE](LICENSE) to see the full text.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-(Martin; 2019-08-xx; wrapper version 0.3.1.dev)
+(Martin; 2019-09-10; wrapper version 0.3.1)
