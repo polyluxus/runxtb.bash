@@ -3,8 +3,8 @@
 ## Setup xtb, crest, and enso
 
 If you have access to the rwth0425 coputation project on CLAIX18, 
-the you can skip most of this part, as this installation is ready to go
-after initialising the software from this project (see at the end).
+then you can skip most of this part, as this installation is ready to go
+after initialising the software from this project (see isection at the end).
 If you want to know more, then read on.
 
 ### Bundle the programs
@@ -41,9 +41,8 @@ I have combined these into one loadable module in the following way:
    This will set or append the environment variables
    `PATH`, `XTBPATH`, `MANPATH`, `LD_LIBRARY_PATH`, `PYTHONPATH`.
    You need to edit this file to make sure to also include the directory created in 4. in `PATH`.  
-   If you are using modules, then you probably know how to create one yourself and how to load it.
-   (In a later version I will include an example.)
-   
+   If you are using modules, then you probably know how to create one yourself and how to load it,
+   but [examples are available with this repository](module-examples.md).
 
 ### Additional notes on enso
 
@@ -213,4 +212,4 @@ Make modifications as appropriate.
 
 ---
 
-This guide was last updated: 2019-08-30.
+This guide was last updated: 2019-09-10.
