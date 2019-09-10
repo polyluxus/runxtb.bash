@@ -1,5 +1,26 @@
 #!/bin/bash
 
+###
+#
+# runxtb.sh -- 
+#   a wrapper script to apply an environment for xtb
+# Copyright (C) 2019 Martin C Schwarzer
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+###
+
 #hlp ===== Not Part of xTB =====
 #hlp DESCRIPTION:
 #hlp   This is a little helper script to use xTB from
@@ -7,6 +28,14 @@
 #hlp   without making changes to any local setting files like
 #hlp   '.bashrc', '.profile', etc.
 #hlp  
+#hlp LICENSE:
+#hlp   runxtb.sh  Copyright (C) 2019  Martin C Schwarzer
+#hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software, 
+#hlp   and you are welcome to redistribute it under certain conditions; 
+#hlp   please see the license file distributed alongside this repository,
+#hlp   which is available when you type '${0##*/} license',
+#hlp   or at <https://github.com/polyluxus/runxtb.bash>.
+#hlp
 #hlp USAGE:
 #hlp   ${0##*/} [script options] -- <coord_file> [xtb options]
 #hlp 
@@ -691,6 +720,17 @@ scriptpath="$( get_bindir "$0" "Directory of runxtb" )"
 version="${version:-unspecified}"
 versiondate="${versiondate:-unspecified}"
 debug "Version ${version} from ${versiondate}."
+
+if [[ "$1" =~ ^[Ll][Ii][Cc][Ee][Nn][Ss][Ee]$ ]] ; then
+  [[ -r "$scriptpath/LICENSE" ]] || fatal "No license file found. Your copy of the repository might be corrupted."
+  if command -v less &> /dev/null ; then
+    less "$scriptpath/LICENSE"
+  else
+    cat "$scriptpath/LICENSE"
+  fi
+  message "Displayed license and will exit."
+  exit 0
+fi
 
 runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD")"
 debug "runxtbrc_loc=$runxtbrc_loc"
