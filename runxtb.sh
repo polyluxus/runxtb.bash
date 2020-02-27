@@ -4,7 +4,7 @@
 #
 # runxtb.sh -- 
 #   a wrapper script to apply an environment for xtb
-# Copyright (C) 2019 Martin C Schwarzer
+# Copyright (C) 2019 - 2020  Martin C Schwarzer
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -157,7 +157,7 @@ display_howto ()
     fi
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
-  debug "$( declare -p MANPATH )"
+  debug "$( declare -p MANPATH 2>&1 )"
 
   message "From version 6.0 onwards there is no HOWTO included, displaying man page instead."
 
@@ -513,7 +513,7 @@ backup_if_exists ()
 write_submit_script ()
 {
     message "Remote mode selected, creating job script instead."
-    # Possible values for queue are pbs-gen bsub-gen bsub-rwth
+    # Possible values for queue are pbs-gen bsub-gen bsub-rwth slurm-gen slurm-rwth
     local queue="$1" queue_short 
     local output_file_local="$2" submitscript_filename
     [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
@@ -531,9 +531,9 @@ write_submit_script ()
     echo "#!/bin/bash" >&9
     echo "# Submission script automatically created with runxtb.sh" >&9
 
-    # Add some overhead
+    # Calculate the correct use of memory, add some overhead
     local corrected_memory
-    corrected_memory=$(( requested_memory + 100 ))
+    corrected_memory=$(( requested_numCPU * requested_memory + 100 ))
     
     # Header is different for the queueing systems
     if [[ "$queue" =~ [Pp][Bb][Ss] ]] ; then
@@ -931,7 +931,9 @@ else
   # Add the manual path, even though we won't need it
   [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
   export XTBPATH PATH MANPATH
-  debug "$( declare -p XTBPATH PATH MANPATH )"
+  # If for whatever reason one of these variables is unset, then write the error in the debug log, 
+  # instead of writing it directly to the error channel
+  debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
 fi
 
 # Check whether we have the right executable
