@@ -6,6 +6,7 @@ extended tight-binding semi-empirical program package
 (version 6.0 or later) 
 from Stefan Grimme's group at the University of Bonn
 (contact: xtb{at}thch.uni-bonn.de).
+It is available via [GitHub](https://github.com/grimme-lab/xtb).
 
 It makes it unnecessary to set environment variables like 
 `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OMP_STACKSIZE`, and `XTBPATH` globally,
@@ -168,7 +169,7 @@ please include the debug output when submitting a bug report to the
 ## License (GNU General Public License v3.0)
 
 runxtb.bash - a wrapper script for xtb
-Copyright (C) 2019 Martin C Schwarzer
+Copyright (C) 2019 - 2020 Martin C Schwarzer
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -185,4 +186,4 @@ See [LICENSE](LICENSE) to see the full text.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-(Martin; 2019-09-10; wrapper version 0.3.1)
+(Martin; 2020-02-27; wrapper version 0.3.2)
