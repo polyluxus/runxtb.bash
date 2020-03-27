@@ -9,10 +9,11 @@
 #
    requested_memory=1000
 
-## Set installation directory (not including the bin directory and the executable name).
+## Set installation directory.
+#  (Without including the bin directory/ executable name; avoid trailing slashes.)
 #
 #  xtb_install_root="/path/to/xtb/root"
-   xtb_install_root=""
+   xtb_install_root="~software/chemsoft/xtb/xtb_6.3.pre2"
 #
 ## Set the name of the executable.
 ## (This should be xtb. Set to xtb.dummy for testing.)

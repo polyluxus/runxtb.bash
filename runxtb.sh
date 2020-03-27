@@ -29,7 +29,7 @@
 #hlp   '.bashrc', '.profile', etc.
 #hlp  
 #hlp LICENSE:
-#hlp   runxtb.sh  Copyright (C) 2019  Martin C Schwarzer
+#hlp   runxtb.sh  Copyright (C) 2019 - 2020  Martin C Schwarzer
 #hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software, 
 #hlp   and you are welcome to redistribute it under certain conditions; 
 #hlp   please see the license file distributed alongside this repository,
@@ -736,7 +736,7 @@ runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD"
 debug "runxtbrc_loc=$runxtbrc_loc"
 
 if [[ -n $runxtbrc_loc ]] ; then
-  # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+  # shellcheck source=./runxtb.rc
   . "$runxtbrc_loc"
   message "Configuration file '$runxtbrc_loc' applied."
 else
@@ -919,7 +919,8 @@ else
   debug "Using path settings."
   # Assume if there is no special configuration applied which sets the install directory
   # that the scriptdirectory is also the root directory of xtb
-  XTBPATH="${xtb_install_root:-$scriptpath}"
+  resolved_xtb_install_root=$( get_bindir "$xtb_install_root/bin" "xTB root directory" )
+  XTBPATH="${resolved_xtb_install_root:-$scriptpath}"
   if [[ -d "${XTBPATH}/bin" ]] ; then
     add_to_PATH "${XTBPATH}/bin"
   else
