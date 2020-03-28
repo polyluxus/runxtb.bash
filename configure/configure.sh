@@ -624,10 +624,12 @@ print_settings ()
   echo     "#  "
   echo     "###"
 
-  echo     "## Set directory (not including the executable)."
+  echo     "## Set directory."
+  echo     "#  (Without including the bin directory/ executable name; avoid trailing slashes.)"
   echo     "#  "
   if [[ -z $use_xtbhome ]] ; then
     echo   "#  xtb_install_root=/path/to/xtbhome"
+    echo   "#  xtb_install_root='~polyluxus/chemsoft/xtb/xtb_6.3.pre2'"
   else
     echo   "   xtb_install_root=\"$use_xtbhome\""
   fi
@@ -793,9 +795,12 @@ runxtbrc_path="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configurati
 # Gather all information
 recover_rc || ask_all_settings
 
-ask "Where do you want to store these settings?"
+ask "Where do you want to store these settings? (Please enter an absolute/ relatiuve file and path.)"
 message "Predefined location: $PWD/runxtb.rc"
+message "  (This is the current directory. It will be chosen if the input is empty.)"
 message "Suggested location : $runxtbrc_path/.runxtbrc"
+message "  (This is the runxtb installation directory.)"
+message "You may also choose to enter a directory in which the file 'runxtb.rc' will be created."
 
 settings_filename=$(read_human_input)
 if [[ -z $settings_filename ]] ; then
@@ -803,6 +808,9 @@ if [[ -z $settings_filename ]] ; then
 elif [[ -d "$settings_filename" ]] ; then
   settings_filename="$settings_filename/runxtb.rc"
   message "No filename specified, use '$settings_filename' instead."
+elif [[ $settings_filename =~ ^[Aa][Uu][Tt][Oo]$ ]] ; then
+  settings_filename="$runxtbrc_path/.runxtbrc"
+  message "Automatic mode chosen, using '$settings_filename'."
 fi
 backup_if_exists "$settings_filename"
 

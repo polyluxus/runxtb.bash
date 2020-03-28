@@ -16,7 +16,7 @@ If it is your own home directory, you can also use `$::env(HOME)` as an argument
 The installation variable `XTBHOME` also has to be adjusted accordingly.
 It currently assumes that the software is stored 
 in a directory `${PROJECTHOME}/local/$modulename/$modulename-$version`,
-which could resolve to `/home/polyluxus/local/xtb/xtb-6.2.0` for the
+which could resolve to `/home/polyluxus/local/xtb/xtb-6.2.3` for the
 most recent version of xtb.
 The variable `version` will be set from the version module, see below.
 
@@ -32,7 +32,7 @@ The variable `version` will be set from the version module, see below.
 set modulename "xtb"
 
 # Home directory of the installation
-set PROJECTHOME "/home/rwth0425"
+set PROJECTHOME "/home/polyluxus"
 
 # Define local variable with path to installation software
 # version will be set by referring module file
@@ -46,6 +46,7 @@ proc ModulesHelp { } {
   puts stderr "*** This module initialises the $modulename $version environment ***"
   puts stderr "    An extended tight-binding semi-empirical program package        " 
   puts stderr "    Please contact xtb@thch.uni-bonn.de for details.                "
+  puts stderr "    See also: https://github.com/grimme-lab/xtb                     "
 }
 
 # Short description (preferably 1 line) what the loaded software does,
@@ -82,17 +83,29 @@ switch [module-info mode] {
   }
 }
 
-# XTBPATH replaces the old XTBHOME from version >= 6.0 
+# XTBHOME is the root directory of the loaded xtb version
+setenv        XTBHOME  $XTBHOME
+
+# Recommendations for loading:
+prepend-path  XTBPATH  $::env(HOME)
 prepend-path  XTBPATH  $XTBHOME
+prepend-path  XTBPATH  ${XTBHOME}/share/xtb
 
 # The following paths need to be set/adjusted for the 6.0 distributions
 prepend-path  PATH     $XTBHOME/bin
-prepend-path  MANPATH  $XTBHOME/man
+# Old MANPATH (~ 6.0)
+if { [file isdirectory $XTBHOME/man] } {
+  prepend-path  MANPATH  $XTBHOME/man
+}
+# New MANPATH (~ 6.2.x)
+if { [file isdirectory $XTBHOME/share/man] } {
+  prepend-path  MANPATH  $XTBHOME/share/man
+}
 # Include libraries
 if { [file isdirectory $XTBHOME/lib] } {
   prepend-path  LD_LIBRARY_PATH     $XTBHOME/lib
 }
-# Include the scripts directory, if it exists
+# Include the scripts directory, if it exists (very old, or very custom)
 if { [file isdirectory $XTBHOME/scripts] } {
   prepend-path  PATH     $XTBHOME/scripts
 }
@@ -123,7 +136,7 @@ set module_base_path "/home/rwth0425/modules/source"
 # Needs to be adjusted for what is to be loaded
 set MAJORVERSION "6"
 set MINORVERSION "2"
-set REVISION     "0"
+set REVISION     "3"
 
 # Will be read by the source module file
 set version "$MAJORVERSION.$MINORVERSION.$REVISION"
@@ -133,3 +146,7 @@ source "$module_base_path/xtb6/xtb6"
 ```
 
 If no version control is wanted, one module with hard-coded paths should also do the trick.
+
+*Disclaimer:* I currently have no system to check whether these files work, I tried to
+incorporate some of the changes in the setup given in the xtb manual. You'll get the gist,
+use them as templates and review every line before use.

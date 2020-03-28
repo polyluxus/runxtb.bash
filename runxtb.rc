@@ -13,7 +13,8 @@
 #  (Without including the bin directory/ executable name; avoid trailing slashes.)
 #
 #  xtb_install_root="/path/to/xtb/root"
-   xtb_install_root="~software/chemsoft/xtb/xtb_6.3.pre2"
+#  xtb_install_root="~polyluxus/chemsoft/xtb/xtb_6.3.pre2"
+   xtb_install_root=""
 #
 ## Set the name of the executable.
 ## (This should be xtb. Set to xtb.dummy for testing.)

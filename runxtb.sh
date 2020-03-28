@@ -451,6 +451,22 @@ add_to_MANPATH ()
     debug "$MANPATH"
 }
 
+add_to_LD_PATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$LD_LIBRARY_PATH: =~ :$1: ]] || LD_LIBRARY_PATH="$1:$LD_LIBRARY_PATH"
+    debug "$LD_LIBRARY_PATH"
+}
+
+add_to_PYTHONPATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$PYTHONPATH: =~ :$1: ]] || PYTHONPATH="$1:$PYTHONPATH"
+    debug "$PYTHONPATH"
+}
+
 #
 # Get settings from configuration file
 #
@@ -628,19 +644,23 @@ write_submit_script ()
 			EOF
     else
       # Use path settings
+      # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
     	cat >&9 <<-EOF
-			export PATH="$XTBPATH/bin:\$PATH"
+			export XTBHOME="$XTBHOME"
 			export XTBPATH="$XTBPATH"
-			# Setting MANPATH is not necessary in scripted mode.
+			export PATH="$XTBHOME/bin:\$PATH"
+			export LD_LIBRARY_PATH="$XTBHOME/lib:\$LD_LIBRARY_PATH"
+			# Setting MANPATH/ PYTHONPATH is not necessary in scripted mode.
 			EOF
     fi
 
     cat >&9 <<-EOF
 		# Test the command
 		command -v "$xtb_callname" || exit 1
-		export OMP_NUM_THREADS="$requested_numCPU"
-		export MKL_NUM_THREADS="$requested_numCPU"
 		export OMP_STACKSIZE="${requested_memory}m"  
+		export OMP_NUM_THREADS="$requested_numCPU"
+		export OMP_MAX_ACTIVE_LEVELS=1
+		export MKL_NUM_THREADS="$requested_numCPU"
 		ulimit -s unlimited || exit 1
 
 		exit_status=0
@@ -911,7 +931,7 @@ fi
 message "This is not the original xtb program!"
 message "This is only a wrapper to set paths and variables."
 
-if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
   debug "Using modules."
   # Loading the modules should take care of everything except threats
   load_xtb_modules || fatal "Failed loading modules."
@@ -919,19 +939,24 @@ else
   debug "Using path settings."
   # Assume if there is no special configuration applied which sets the install directory
   # that the scriptdirectory is also the root directory of xtb
-  resolved_xtb_install_root=$( get_bindir "$xtb_install_root/bin" "xTB root directory" )
-  XTBPATH="${resolved_xtb_install_root:-$scriptpath}"
-  if [[ -d "${XTBPATH}/bin" ]] ; then
-    add_to_PATH "${XTBPATH}/bin"
+  xtb_install_root=${xtb_install_root:-$scriptpath}
+  XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" )
+  XTBPATH="${XTBHOME}/share/xtb:${XTBHOME}:${HOME}"
+  if [[ -d "${XTBHOME}/bin" ]] ; then
+    add_to_PATH "${XTBHOME}/bin"
   else
-    fatal "Cannot locate bin directory in '$XTBPATH'."
+    fatal "Cannot locate bin directory in '$XTBHOME'."
   fi
   # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
-  [[ -d "${XTBPATH}/python" ]] && add_to_PATH "${XTBPATH}/python"
-  [[ -d "${XTBPATH}/scripts" ]] && add_to_PATH "${XTBPATH}/scripts"
-  # Add the manual path, even though we won't need it
-  [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
-  export XTBPATH PATH MANPATH
+  [[ -d "${XTBHOME}/python" ]] && add_to_PYTHONPATH "${XTBHOME}/python"
+  [[ -d "${XTBHOME}/lib" ]] && add_to_LD_PATH "${XTBHOME}/lib"
+  [[ -d "${XTBHOME}/scripts" ]] && add_to_PATH "${XTBHOME}/scripts"
+  # Add the manual path, even though we probably won't need it
+  # Old version
+  [[ -d "${XTBHOME}/man" ]] && add_to_MANPATH "${XTBHOME}/man"
+  # New Version
+  [[ -d "${XTBHOME}/share/man" ]] && add_to_MANPATH "${XTBHOME}/share/man"
+  export XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
   # If for whatever reason one of these variables is unset, then write the error in the debug log, 
   # instead of writing it directly to the error channel
   debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
@@ -941,11 +966,12 @@ fi
 debug "$xtb_callname is '$( command -v "$xtb_callname")'" || fatal "Command not found: $xtb_callname"
 
 # Set and export other environment variables
-OMP_NUM_THREADS="$requested_numCPU"
-MKL_NUM_THREADS="$requested_numCPU"
 OMP_STACKSIZE="$requested_memory"
+OMP_NUM_THREADS="$requested_numCPU"
+OMP_MAX_ACTIVE_LEVELS=1
+MKL_NUM_THREADS="$requested_numCPU"
 
-export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
+export OMP_STACKSIZE OMP_NUM_THREADS OMP_MAX_ACTIVE_LEVELS MKL_NUM_THREADS
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
 debug "Settings:    xtb_install_root=$xtb_install_root (= XTBPATH)"
 debug "(current)    xtb_callname=$xtb_callname"
