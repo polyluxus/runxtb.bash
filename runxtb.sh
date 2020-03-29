@@ -856,8 +856,12 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            This will also set the callname and ignore an empty commandline.
     #hlp            Assumed format for <ARG>: ./relative/or/absolute/path/to/XTBHOME/bin/'callname'
     B) 
-      xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )"
-      xtb_callname="${OPTARG##*/}"
+      if xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )" ; then
+        xtb_callname="${OPTARG##*/}"
+        debug "Using installation in '$xtb_install_root' with name '$xtb_callname'."
+      else
+        fatal "Could not extract XTBHOME and name of application. Abort"
+      fi
       ;;
     #hlp   -C <ARG> Change the callname of the script.
     #hlp            This can be useful to request a different executable from the package.
@@ -947,7 +951,11 @@ else
   # Assume if there is no special configuration applied which sets the install directory
   # that the scriptdirectory is also the root directory of xtb
   xtb_install_root=${xtb_install_root:-$scriptpath}
-  XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" )
+  if XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+    debug "XTBHOME successfully resolved: '$XTBHOME'"
+  else
+    fatal "Could not set XTBHOME. Provided xtb root directory in settings might be wrong."
+  fi
   XTBPATH="${XTBHOME}/share/xtb:${XTBHOME}:${HOME}"
   if [[ -d "${XTBHOME}/bin" ]] ; then
     add_to_PATH "${XTBHOME}/bin"
