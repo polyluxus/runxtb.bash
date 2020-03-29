@@ -73,7 +73,7 @@ backup_if_exists ()
   fi
 }
 
-expand_tilde ()
+expand_tilde_path ()
 {
   local expand_string="$1" return_string
   # Tilde does not expand like a variable, this might lead to files not being found
@@ -107,9 +107,12 @@ check_exist_executable ()
 
 get_bindir ()
 {
-#  Taken from https://stackoverflow.com/a/246128/3180795
-  local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
+  # Resolves the absolute location of parameter and returns it
+  # partially taken from https://stackoverflow.com/a/246128/3180795
+  local resolve_file="$1" description="$2" 
+  local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
+  resolve_file=$( expand_tilde_path "$resolve_file" )
   
   # Check if anything exists in this location, otherwise abort.
   if [[ ! -e "$resolve_file" ]] ; then
@@ -434,7 +437,7 @@ ask_installation_path ()
   # Will be empty if skipped; can return without assigning/testing empty values
   [[ -z $use_xtbpath ]] && return
   debug "use_xtbpath=$use_xtbpath"
-  use_xtbpath="$(expand_tilde "$use_xtbpath")"
+  use_xtbpath="$( expand_tilde_path "$use_xtbpath" )"
   if check_exist_executable "$use_xtbpath" ; then
     use_xtbhome=$(get_bindir "$use_xtbpath" "XTB bin directory") && use_xtbname=${use_xtbpath##*/}
     use_xtbhome="${use_xtbhome%/bin}"
