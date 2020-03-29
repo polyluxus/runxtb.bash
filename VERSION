@@ -1,3 +1,3 @@
 #!/bin/bash
-version="0.4.0.alpha"
-versiondate="2020-03-00"
+version="0.4.0.rc"
+versiondate="2020-03-29"
