@@ -111,6 +111,13 @@ get_bindir ()
   local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
   
+  # Check if anything exists in this location, otherwise abort.
+  if [[ ! -e "$resolve_file" ]] ; then
+    fatal "It appears, that '$resolve_file' does not exist."
+  else
+    debug "File resolved to '$resolve_file' and does exist."
+  fi
+  
   #  resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
     link_target="$(readlink "$resolve_file")"
@@ -159,7 +166,7 @@ test_rc_file ()
 get_rc ()
 {
   local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
-  while [[ ! -z $1 ]] ; do
+  while [[ -n $1 ]] ; do
     test_runxtbrc_dir="$1"
     shift
     if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
@@ -182,8 +189,8 @@ recover_rc ()
   runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "/home/$USER/.config/" "$PWD")"
   debug "runxtbrc_loc=$runxtbrc_loc"
   
-  if [[ ! -z $runxtbrc_loc ]] ; then
-    # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+  if [[ -n $runxtbrc_loc ]] ; then
+    # shellcheck source=../runxtb.rc
     . "$runxtbrc_loc"
     message "Configuration file '$runxtbrc_loc' applied."
     ask "Would you like to specify a different file?"
@@ -191,7 +198,7 @@ recover_rc ()
       ask "What file would you like to load?"
       runxtbrc_loc=$(read_human_input)
       if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
-        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        # shellcheck source=../runxtb.rc
         . "$runxtbrc_loc"
         message "Configuration file '$runxtbrc_loc' applied."
         message "If some values were not set in this file,"
@@ -208,7 +215,7 @@ recover_rc ()
       ask "What file would you like to load?"
       runxtbrc_loc=$(read_human_input)
       if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
-        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        # shellcheck source=../runxtb.rc
         . "$runxtbrc_loc"
         message "Configuration file '$runxtbrc_loc' applied."
       else
@@ -242,6 +249,12 @@ recover_rc ()
   debug "use_memory=$use_memory"
 
   use_xtbhome="$xtb_install_root"
+  if use_xtbhome=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+    debug "XTB root directory successfully resolved: '$XTBHOME'"
+  else
+    use_xtbhome=""
+    debug "Could not extract xtb root directory, will set empty."
+  fi
   use_xtbname="$xtb_callname"
   if [[ -z $use_xtbhome || -z $use_xtbname ]] ; then
     ask_installation_path
@@ -638,7 +651,7 @@ print_settings ()
   echo     "## (This should be xtb. Here set to xtb.dummy for testing.)"
   echo     "#"
   echo     "#  xtb_callname=\"xtb.dummy\""
-  if [[ ! -z $use_xtbname ]] ; then
+  if [[ -n $use_xtbname ]] ; then
     echo   "   xtb_callname=\"$use_xtbname\""
   fi
   echo     "#"
@@ -790,7 +803,7 @@ fi
 
 # Get to know where this script is located
 scriptpath="$(get_bindir "$0" "directory of configure script")"
-runxtbrc_path="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configuration file")"
+runxtbrc_path="$(get_bindir "$scriptpath/../runxtb.rc" "directory of configuration file")"
 
 # Gather all information
 recover_rc || ask_all_settings
