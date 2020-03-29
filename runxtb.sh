@@ -207,6 +207,13 @@ get_bindir ()
   local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
   resolve_file=$( expand_tilde_path "$resolve_file" )
+  
+  # Check if anything exists in this location, otherwise abort.
+  if [[ ! -e "$resolve_file" ]] ; then
+    fatal "It appears, that '$resolve_file' does not exist."
+  else
+    debug "File resolved to '$resolve_file' and does exist."
+  fi
 
   # resolve $resolve_file until it is no longer a symlink
   while [[ -h "$resolve_file" ]] ; do 

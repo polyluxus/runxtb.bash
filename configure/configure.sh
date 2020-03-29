@@ -795,12 +795,13 @@ runxtbrc_path="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configurati
 # Gather all information
 recover_rc || ask_all_settings
 
-ask "Where do you want to store these settings? (Please enter an absolute/ relatiuve file and path.)"
+ask "Where do you want to store these settings? (Please enter an absolute/ relative file and path.)"
 message "Predefined location: $PWD/runxtb.rc"
-message "  (This is the current directory. It will be chosen if the input is empty.)"
+message "  (Creates the configuration file in the current directory. This option will be chosen if the input is empty.)"
 message "Suggested location : $runxtbrc_path/.runxtbrc"
-message "  (This is the runxtb installation directory.)"
+message "  (This creates the configuration in the runxtb installation directory. Entering 'auto' will choose this location.)"
 message "You may also choose to enter a directory in which the file 'runxtb.rc' will be created."
+message "Please note that only the filenames 'runxtb.rc' and '.runxtbrc' will be recognised by the script."
 
 settings_filename=$(read_human_input)
 if [[ -z $settings_filename ]] ; then
