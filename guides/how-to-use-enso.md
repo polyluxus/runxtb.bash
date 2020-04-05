@@ -1,3 +1,16 @@
+# Note (added for runxtb.bash v0.4.0)
+This guide has not been updated since 2019-09-10. Since then a lot has happened. 
+For example, xtb went open source and is now available on 
+[GitHub](https://github.com/grimme-lab/xtb/releases/latest).
+This is also true for enso, which can also be obtained from
+[GitHub](https://github.com/grimme-lab/enso/releases/latest).
+Furthermore, I am not maintaining any installation on the RWTH cluster, hence I cannot recommend 
+the bundle given below. The below guide has to be adjusted for these changes.
+A newer guide will be written and incorporated into this repository in due time.
+Until this is done, I will keep this page as a starting point for further development.
+
+
+
 # How to use enso (and crest, and xtb)
 
 ## Setup xtb, crest, and enso
@@ -64,7 +77,6 @@ I have combined these into one loadable module in the following way:
    PARA_ARCH=SMP; PARNODES=1; export PARA_ARCH PARNODES
    ```
 
----
 
 ## Automatically generate NMR Spectra (run enso)
 
@@ -180,7 +192,6 @@ However, there is absolutely no guarantee for correctness.
    ```
 10. Look at the spectrum. Be happy.
 
----
 
 ## Notes for rwth0425:
 
@@ -210,6 +221,6 @@ cp ~rwth0425/local/xtb/examples/ensorc ./.ensorc
 (Same applies to `cefinerc`.)
 Make modifications as appropriate.
 
----
 
 This guide was last updated: 2019-09-10.
+

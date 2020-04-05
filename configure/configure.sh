@@ -252,11 +252,13 @@ recover_rc ()
   debug "use_memory=$use_memory"
 
   use_xtbhome="$xtb_install_root"
-  if use_xtbhome=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
-    debug "XTB root directory successfully resolved: '$XTBHOME'"
-  else
-    use_xtbhome=""
-    debug "Could not extract xtb root directory, will set empty."
+  if [[ -n $use_xtbhome ]] ; then
+    if use_xtbhome=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+      debug "XTB root directory successfully resolved: '$use_xtbhome'"
+    else
+      use_xtbhome=""
+      debug "Could not extract xtb root directory, will set empty."
+    fi
   fi
   use_xtbname="$xtb_callname"
   if [[ -z $use_xtbhome || -z $use_xtbname ]] ; then
