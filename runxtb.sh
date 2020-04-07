@@ -108,53 +108,7 @@ display_howto ()
     # Loading the modules should take care of everything except threads
     load_xtb_modules || fatal "Failed loading modules."
   else
-    debug "Using path settings."
-    # Assume if there is no special configuration applied which sets the install directory
-    # that the scriptdirectory is also the root directory of xtb
-    XTBPATH="${xtb_install_root:-$scriptpath}"
-    debug "Setting XTBPATH=$XTBPATH"
-    # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
-    local xtb_manpath xtbpath_munge
-    # Since XTBPATH must be set, parse that first for the manpath
-    if [[ -n $XTBPATH ]] ; then
-      xtbpath_munge="$XTBPATH"
-      local path_pattern="^:([^:]+):(.*)$"
-      debug "xtbpath_munge=$xtbpath_munge"
-      while [[ ":${xtbpath_munge}:" =~ $path_pattern ]] ; do 
-        debug "Pattern matched: ${BASH_REMATCH[0]}"
-        if [[ -d "${BASH_REMATCH[1]}/man" ]] ; then 
-          xtb_manpath="${BASH_REMATCH[1]}/man"
-          debug "Use xtb_manpath=$xtb_manpath"
-          break
-        else
-          xtbpath_munge="${BASH_REMATCH[2]}" 
-          debug "xtbpath_munge=$xtbpath_munge"
-          continue
-        fi
-      done
-    else
-      warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
-      warning "Please check your installation."
-    fi 
-    # If no man directory is found along path, fallback to XTBHOME
-    if [[ -z $xtb_manpath ]] ; then
-      debug "Could not identify xtb manual path."
-      # Assume if XTBHOME is set, it is the root directorry and contains the man directory
-      if [[ -n $XTBHOME ]] ; then
-        debug "Old variable XTBHOME is set ($XTBHOME)."
-        if [[ -d "$XTBHOME/man" ]] ; then
-          xtb_manpath="$XTBHOME/man"
-          debug "Fallback xtb_manpath=$xtb_manpath"
-        else 
-          fatal "Manual directory '$XTBHOME/man' is missing."
-        fi
-      else
-        fatal "The fallback environment variable 'XTBHOME' is unset."
-      fi
-    else
-      # Add the found directory to the manpath
-      add_to_MANPATH "$xtb_manpath"
-    fi
+    load_path_settings
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
   debug "$( declare -p MANPATH 2>&1 )"
@@ -472,6 +426,38 @@ add_to_PYTHONPATH ()
     [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
     [[ :$PYTHONPATH: =~ :$1: ]] || PYTHONPATH="$1:$PYTHONPATH"
     debug "$PYTHONPATH"
+}
+
+load_path_settings ()
+{
+  debug "Using path settings."
+  # Assume if there is no special configuration applied which sets the install directory
+  # that the scriptdirectory is also the root directory of xtb
+  xtb_install_root=${xtb_install_root:-$scriptpath}
+  if XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+    debug "XTBHOME successfully resolved: '$XTBHOME'"
+  else
+    fatal "Could not set XTBHOME. Provided xtb root directory in settings might be wrong."
+  fi
+  XTBPATH="${XTBHOME}/share/xtb:${XTBHOME}:${HOME}"
+  if [[ -d "${XTBHOME}/bin" ]] ; then
+    add_to_PATH "${XTBHOME}/bin"
+  else
+    fatal "Cannot locate bin directory in '$XTBHOME'."
+  fi
+  # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
+  [[ -d "${XTBHOME}/python" ]] && add_to_PYTHONPATH "${XTBHOME}/python"
+  [[ -d "${XTBHOME}/lib" ]] && add_to_LD_PATH "${XTBHOME}/lib"
+  [[ -d "${XTBHOME}/scripts" ]] && add_to_PATH "${XTBHOME}/scripts"
+  # Add the manual path, even though we probably won't need it
+  # Old version
+  [[ -d "${XTBHOME}/man" ]] && add_to_MANPATH "${XTBHOME}/man"
+  # New Version
+  [[ -d "${XTBHOME}/share/man" ]] && add_to_MANPATH "${XTBHOME}/share/man"
+  export XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+  # If for whatever reason one of these variables is unset, then write the error in the debug log, 
+  # instead of writing it directly to the error channel
+  debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
 }
 
 #
@@ -947,34 +933,7 @@ if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
   # Loading the modules should take care of everything except threats
   load_xtb_modules || fatal "Failed loading modules."
 else
-  debug "Using path settings."
-  # Assume if there is no special configuration applied which sets the install directory
-  # that the scriptdirectory is also the root directory of xtb
-  xtb_install_root=${xtb_install_root:-$scriptpath}
-  if XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
-    debug "XTBHOME successfully resolved: '$XTBHOME'"
-  else
-    fatal "Could not set XTBHOME. Provided xtb root directory in settings might be wrong."
-  fi
-  XTBPATH="${XTBHOME}/share/xtb:${XTBHOME}:${HOME}"
-  if [[ -d "${XTBHOME}/bin" ]] ; then
-    add_to_PATH "${XTBHOME}/bin"
-  else
-    fatal "Cannot locate bin directory in '$XTBHOME'."
-  fi
-  # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
-  [[ -d "${XTBHOME}/python" ]] && add_to_PYTHONPATH "${XTBHOME}/python"
-  [[ -d "${XTBHOME}/lib" ]] && add_to_LD_PATH "${XTBHOME}/lib"
-  [[ -d "${XTBHOME}/scripts" ]] && add_to_PATH "${XTBHOME}/scripts"
-  # Add the manual path, even though we probably won't need it
-  # Old version
-  [[ -d "${XTBHOME}/man" ]] && add_to_MANPATH "${XTBHOME}/man"
-  # New Version
-  [[ -d "${XTBHOME}/share/man" ]] && add_to_MANPATH "${XTBHOME}/share/man"
-  export XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-  # If for whatever reason one of these variables is unset, then write the error in the debug log, 
-  # instead of writing it directly to the error channel
-  debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
+  load_path_settings || fatal "Failed initialising with path settings."
 fi
 
 # Check whether we have the right executable
