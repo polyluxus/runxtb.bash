@@ -1,10 +1,19 @@
 # Example for module files
 
 The module system makes setting up different versions of software much easier to maintain.
-Module files can be very simple, or very complicated.
+Module files can be very simple, or very complex.
 All they have to do though is to set the appropriate paths and variables for the execution.
 I have used modified versions from CLAIX18 (the RWTH Aachen cluster),
-which I have cleaned for this repository.
+which I have cleaned for this repository. 
+
+*Disclaimer:* 
+I am no longer affiliated with RWTH Aachen, and I am not using the module system in my current setup.
+Therefore the example files provided below are not tested in a working environment. 
+I have tried to incorporate some of the changes in the setup given in the xtb manual,
+see [read the docs](https://xtb-docs.readthedocs.io/en/latest/contents.html). 
+Please also see my guide on [how to set up xtb for runxtb](set-up.md).
+Use the files provided below as a starting point for your own templates and 
+review them carefully before use.
 
 ## Root module
 
@@ -122,7 +131,8 @@ The version module is only necessary to set the `version` variable, so that
 the root module will find the correct software path.
 
 The variable `module_base_path` needs to be adjusted to point to 
-the directory of the root module.
+the directory of the root module, the filename in the last line
+also needs to be adjusted to point to the root module, which is defined above.
 
 ```
 #%Module1.0###-*-tcl-*-#########################################################
@@ -130,8 +140,8 @@ the directory of the root module.
 ## XTB modulefile
 ##
 
-# For the local install 
-set module_base_path "/home/rwth0425/modules/source"
+# For the local install (modify this to the correct path)
+set module_base_path "/home/polyluxus/modules/source"
 
 # Needs to be adjusted for what is to be loaded
 set MAJORVERSION "6"
@@ -141,12 +151,12 @@ set REVISION     "3"
 # Will be read by the source module file
 set version "$MAJORVERSION.$MINORVERSION.$REVISION"
 
-# Load the source module file
-source "$module_base_path/xtb6/xtb6"
+# Load the source module file (needs to be adjusted to the name used for the root module above)
+source "$module_base_path/xtb/xtb"
 ```
 
 If no version control is wanted, one module with hard-coded paths should also do the trick.
 
-*Disclaimer:* I currently have no system to check whether these files work, I tried to
-incorporate some of the changes in the setup given in the xtb manual. You'll get the gist,
-use them as templates and review every line before use.
+The version module should be placed in a directory which is found in the module path environment variable, 
+it could be, using the example above: `/home/polyluxus/modules/load/xtb/xtb_v6.2.3`.
+

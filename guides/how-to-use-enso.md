@@ -1,23 +1,28 @@
-# Note (added for runxtb.bash v0.4.0)
-This guide has not been updated since 2019-09-10. Since then a lot has happened. 
+# Note
+
+The content of this guide has not been updated since 2019-09-10. Since then a lot has happened. 
 For example, xtb went open source and is now available on 
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest).
 This is also true for enso, which can also be obtained from
 [GitHub](https://github.com/grimme-lab/enso/releases/latest).
 Furthermore, I am not maintaining any installation on the RWTH cluster, hence I cannot recommend 
-the bundle given below. The below guide has to be adjusted for these changes.
-A newer guide will be written and incorporated into this repository in due time.
-Until this is done, I will keep this page as a starting point for further development.
+the setup for the outdated bundle given below. This guide would have to be adjusted for any of these changes.
 
+A more general guide on how to set-up xtb and crest for the use with runxtb can be found 
+[here](set-up.md).
+This guide is maintained only as a starting point for computations using enso, although the instructions
+in the [xtb manual](https://xtb-docs.readthedocs.io/en/latest/enso_doc/enso_setup.html) are by far
+better resources.
 
+(Martin; 2020-04-09; wrapper version 0.4.0)
 
 # How to use enso (and crest, and xtb)
 
 ## Setup xtb, crest, and enso
 
-If you have access to the rwth0425 coputation project on CLAIX18, 
+If you have access to the rwth0425 computation project on CLAIX18, 
 then you can skip most of this part, as this installation is ready to go
-after initialising the software from this project (see isection at the end).
+after initialising the software from this project (see section at the end).
 If you want to know more, then read on.
 
 ### Bundle the programs
@@ -53,7 +58,7 @@ I have combined these into one loadable module in the following way:
    `Config_xtb_env.*sh` from your respective shell configuration.
    This will set or append the environment variables
    `PATH`, `XTBPATH`, `MANPATH`, `LD_LIBRARY_PATH`, `PYTHONPATH`.
-   You need to edit this file to make sure to also include the directory created in 4. in `PATH`.  
+   You need to edit this file to make sure to also include the directory created in step 4 in `PATH`.  
    If you are using modules, then you probably know how to create one yourself and how to load it,
    but [examples are available with this repository](module-examples.md).
 
@@ -93,7 +98,7 @@ However, there is absolutely no guarantee for correctness.
 
 1. Optimise the structure with xtb at the same settings as you intend to use crest with. 
    This is recommended as crest uses this structure for sanity checks, but not strictly necessary.  
-   Note that the double dashes `--` devide the options for `runxtb` from the options send to `xtb` (or `crest`, or `enso`).
+   Note that the double dashes `--` divide the options for `runxtb` from the options send to `xtb` (or `crest`, or `enso`).
    ```
    runxtb -- <XYZ> --opt --gbsa <SOLVENT>
    ```
@@ -110,7 +115,7 @@ However, there is absolutely no guarantee for correctness.
    ```
    runxtb -S -C crest -- -tautomerize -gbsa <SOLVENT> -chrg <INT> -uhf <INT>
    ```
-   Since the jobname is derived from the executed program (or a file, if specified), 
+   Since the job name is derived from the executed program (or a file, if specified), 
    the output of this part will be written to `crest.runxtb.out`.
    This step is still quite fast and submission is (probably) not necessary.
    If you find some tautomers, then you may want to calculate a spectrum for each of them.
@@ -138,12 +143,12 @@ However, there is absolutely no guarantee for correctness.
 7. Run enso. This will take time. Multiple calculations will be performed with Orca or Turbomole.
    This step also needs (much) more memory than any of the others.
    There is a small caveat with using Orca:
-   In the enso script the value for maxcore value is hard-coded to be 8000 MB 
+   In the enso script the value for `maxcore` value is hard-coded to be 8000 MB 
    (see also the [Orca Input Library](https://sites.google.com/site/orcainputlibrary/orca-common-problems)).
    In case of the rwth0425 installation, I have changed it to 4000 MB, which should suffice for most applications.
    Given sufficient overhead for Orca, I recommend at least 5 GB *per cpu* (better would be 5.5 GB),
    which you can set with the `-m` switch to the runxtb script.
-   The value for maxcore in case of Turbomole can be set in the `.cefinerc`.
+   The value for `maxcore` in case of Turbomole can be set in the `.cefinerc`.
    Depending on the number of conformers to be treated, you should adjust the requested walltime (`-w` switch).  
    I am using the Orca interface, and it worked well from the command line. 
    However, since Orca uses MPI, the job script created by runxtb must be edited (see below).
@@ -153,7 +158,7 @@ However, there is absolutely no guarantee for correctness.
    runxtb -s -m <INT> -w <HH:MM:SS> -C enso -- -run
    ```
    The output of this part will be written to `enso.runxtb.out`.  
-   Now switch the values for tasks an cpus:
+   Now switch the values for tasks and cpus:
    ```
    --ntasks=<INT>           (was)   --ntasks=1
    --cpus-per-task=1        (was)   --cpus-per-task=<INT>
@@ -165,7 +170,7 @@ However, there is absolutely no guarantee for correctness.
    I don't know the reason, but the orca input generated with enso will use the `omp` value
    for the `%pal` block, so this needs to be set to a reasonable number.
    I believe (but am not sure at all) that `omp` multiplied by `maxthreads` should not exceed 
-   the number of cpu you have available.
+   the number of CPU you have available.
    I had quite successful runs with `omp: <INT>` (CPU I request) and `maxthreads: 1` in `flags.dat`.  
    Submit the script to slurm:
    ```
@@ -206,7 +211,7 @@ cd ~/local/bash_profile.d/
 ln -s ~rwth0425/initialise/init_rwth0425.sh init_rwth0425.bash
 ```
 
-The above mentioned runxtb script is preinstalled and configured, if you load the bin module.
+The above mentioned runxtb script is pre-installed and configured, if you load the bin module.
 ```
 module load rwth0425-bin
 ```

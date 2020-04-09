@@ -29,7 +29,7 @@ For the installation of `runxtb` this will also be `xtb_install_root`.
 There are plenty of other ways to do this, but if you are wondering about these,
 you probably do not need this guide.
 
-For convenience I'd like to use the `runxxtb` script to also be usable with crest.
+For convenience I'd like to use the `runxtb` script to also be usable with crest.
 I found that bundling the crest executable into the repository works best.
 Therefore, change to the `bin` directory of the newly created directory;
 for the example this would be:
@@ -57,7 +57,7 @@ When using modules, some of this might be easily overcome, as [my older guide](h
 but the general aim of this script is different.
 Therefore, I have decided to not support enso within this repository for the time being.
 
-Please follow the guidance in the xtb documentation to make sure of the best use of the repository.
+Please follow the setup and the examples in the xtb documentation to run calculations with enso.
 
 ## Installing and configuring runxtb
 
@@ -153,5 +153,5 @@ If you are not sure, or using it the first time, these are the basic steps for w
 
    Now testing is complete.
 
-(Martin; 2020-03-29; wrapper version 0.4.0.rc)
+(Martin; 2020-04-09; wrapper version 0.4.0)
 
