@@ -73,7 +73,7 @@ backup_if_exists ()
   fi
 }
 
-expand_tilde ()
+expand_tilde_path ()
 {
   local expand_string="$1" return_string
   # Tilde does not expand like a variable, this might lead to files not being found
@@ -107,9 +107,19 @@ check_exist_executable ()
 
 get_bindir ()
 {
-#  Taken from https://stackoverflow.com/a/246128/3180795
-  local resolve_file="$1" description="$2" link_target directory_name resolve_dir_name
+  # Resolves the absolute location of parameter and returns it
+  # partially taken from https://stackoverflow.com/a/246128/3180795
+  local resolve_file="$1" description="$2" 
+  local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
+  resolve_file=$( expand_tilde_path "$resolve_file" )
+  
+  # Check if anything exists in this location, otherwise abort.
+  if [[ ! -e "$resolve_file" ]] ; then
+    fatal "It appears, that '$resolve_file' does not exist."
+  else
+    debug "File resolved to '$resolve_file' and does exist."
+  fi
   
   #  resolve $resolve_file until it is no longer a symlink
   while [ -h "$resolve_file" ]; do 
@@ -159,7 +169,7 @@ test_rc_file ()
 get_rc ()
 {
   local test_runxtbrc_dir test_runxtbrc_loc return_runxtbrc_loc
-  while [[ ! -z $1 ]] ; do
+  while [[ -n $1 ]] ; do
     test_runxtbrc_dir="$1"
     shift
     if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
@@ -182,8 +192,8 @@ recover_rc ()
   runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "/home/$USER/.config/" "$PWD")"
   debug "runxtbrc_loc=$runxtbrc_loc"
   
-  if [[ ! -z $runxtbrc_loc ]] ; then
-    # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+  if [[ -n $runxtbrc_loc ]] ; then
+    # shellcheck source=../runxtb.rc
     . "$runxtbrc_loc"
     message "Configuration file '$runxtbrc_loc' applied."
     ask "Would you like to specify a different file?"
@@ -191,7 +201,7 @@ recover_rc ()
       ask "What file would you like to load?"
       runxtbrc_loc=$(read_human_input)
       if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
-        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        # shellcheck source=../runxtb.rc
         . "$runxtbrc_loc"
         message "Configuration file '$runxtbrc_loc' applied."
         message "If some values were not set in this file,"
@@ -208,7 +218,7 @@ recover_rc ()
       ask "What file would you like to load?"
       runxtbrc_loc=$(read_human_input)
       if runxtbrc_loc=$(test_rc_file "$runxtbrc_loc") ; then
-        # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+        # shellcheck source=../runxtb.rc
         . "$runxtbrc_loc"
         message "Configuration file '$runxtbrc_loc' applied."
       else
@@ -242,6 +252,14 @@ recover_rc ()
   debug "use_memory=$use_memory"
 
   use_xtbhome="$xtb_install_root"
+  if [[ -n $use_xtbhome ]] ; then
+    if use_xtbhome=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+      debug "XTB root directory successfully resolved: '$use_xtbhome'"
+    else
+      use_xtbhome=""
+      debug "Could not extract xtb root directory, will set empty."
+    fi
+  fi
   use_xtbname="$xtb_callname"
   if [[ -z $use_xtbhome || -z $use_xtbname ]] ; then
     ask_installation_path
@@ -421,7 +439,7 @@ ask_installation_path ()
   # Will be empty if skipped; can return without assigning/testing empty values
   [[ -z $use_xtbpath ]] && return
   debug "use_xtbpath=$use_xtbpath"
-  use_xtbpath="$(expand_tilde "$use_xtbpath")"
+  use_xtbpath="$( expand_tilde_path "$use_xtbpath" )"
   if check_exist_executable "$use_xtbpath" ; then
     use_xtbhome=$(get_bindir "$use_xtbpath" "XTB bin directory") && use_xtbname=${use_xtbpath##*/}
     use_xtbhome="${use_xtbhome%/bin}"
@@ -624,10 +642,12 @@ print_settings ()
   echo     "#  "
   echo     "###"
 
-  echo     "## Set directory (not including the executable)."
+  echo     "## Set directory."
+  echo     "#  (Without including the bin directory/ executable name; avoid trailing slashes.)"
   echo     "#  "
   if [[ -z $use_xtbhome ]] ; then
     echo   "#  xtb_install_root=/path/to/xtbhome"
+    echo   "#  xtb_install_root='~polyluxus/chemsoft/xtb/xtb_6.3.pre2'"
   else
     echo   "   xtb_install_root=\"$use_xtbhome\""
   fi
@@ -636,7 +656,7 @@ print_settings ()
   echo     "## (This should be xtb. Here set to xtb.dummy for testing.)"
   echo     "#"
   echo     "#  xtb_callname=\"xtb.dummy\""
-  if [[ ! -z $use_xtbname ]] ; then
+  if [[ -n $use_xtbname ]] ; then
     echo   "   xtb_callname=\"$use_xtbname\""
   fi
   echo     "#"
@@ -788,14 +808,18 @@ fi
 
 # Get to know where this script is located
 scriptpath="$(get_bindir "$0" "directory of configure script")"
-runxtbrc_path="$(get_bindir "$scriptpath/../.runxtbrc" "directory of configuration file")"
+runxtbrc_path="$(get_bindir "$scriptpath/../runxtb.rc" "directory of configuration file")"
 
 # Gather all information
 recover_rc || ask_all_settings
 
-ask "Where do you want to store these settings?"
+ask "Where do you want to store these settings? (Please enter an absolute/ relative file and path.)"
 message "Predefined location: $PWD/runxtb.rc"
+message "  (Creates the configuration file in the current directory. This option will be chosen if the input is empty.)"
 message "Suggested location : $runxtbrc_path/.runxtbrc"
+message "  (This creates the configuration in the runxtb installation directory. Entering 'auto' will choose this location.)"
+message "You may also choose to enter a directory in which the file 'runxtb.rc' will be created."
+message "Please note that only the filenames 'runxtb.rc' and '.runxtbrc' will be recognised by the script."
 
 settings_filename=$(read_human_input)
 if [[ -z $settings_filename ]] ; then
@@ -803,6 +827,9 @@ if [[ -z $settings_filename ]] ; then
 elif [[ -d "$settings_filename" ]] ; then
   settings_filename="$settings_filename/runxtb.rc"
   message "No filename specified, use '$settings_filename' instead."
+elif [[ $settings_filename =~ ^[Aa][Uu][Tt][Oo]$ ]] ; then
+  settings_filename="$runxtbrc_path/.runxtbrc"
+  message "Automatic mode chosen, using '$settings_filename'."
 fi
 backup_if_exists "$settings_filename"
 

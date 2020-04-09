@@ -29,7 +29,7 @@
 #hlp   '.bashrc', '.profile', etc.
 #hlp  
 #hlp LICENSE:
-#hlp   runxtb.sh  Copyright (C) 2019  Martin C Schwarzer
+#hlp   runxtb.sh  Copyright (C) 2019 - 2020  Martin C Schwarzer
 #hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software, 
 #hlp   and you are welcome to redistribute it under certain conditions; 
 #hlp   please see the license file distributed alongside this repository,
@@ -108,53 +108,7 @@ display_howto ()
     # Loading the modules should take care of everything except threads
     load_xtb_modules || fatal "Failed loading modules."
   else
-    debug "Using path settings."
-    # Assume if there is no special configuration applied which sets the install directory
-    # that the scriptdirectory is also the root directory of xtb
-    XTBPATH="${xtb_install_root:-$scriptpath}"
-    debug "Setting XTBPATH=$XTBPATH"
-    # From 6.0 on, XTBPATH must be set. Fail if the fallback is also not found
-    local xtb_manpath xtbpath_munge
-    # Since XTBPATH must be set, parse that first for the manpath
-    if [[ -n $XTBPATH ]] ; then
-      xtbpath_munge="$XTBPATH"
-      local path_pattern="^:([^:]+):(.*)$"
-      debug "xtbpath_munge=$xtbpath_munge"
-      while [[ ":${xtbpath_munge}:" =~ $path_pattern ]] ; do 
-        debug "Pattern matched: ${BASH_REMATCH[0]}"
-        if [[ -d "${BASH_REMATCH[1]}/man" ]] ; then 
-          xtb_manpath="${BASH_REMATCH[1]}/man"
-          debug "Use xtb_manpath=$xtb_manpath"
-          break
-        else
-          xtbpath_munge="${BASH_REMATCH[2]}" 
-          debug "xtbpath_munge=$xtbpath_munge"
-          continue
-        fi
-      done
-    else
-      warning "The environment variable 'XTBPATH' is unset, trying fallback 'XTBHOME'."
-      warning "Please check your installation."
-    fi 
-    # If no man directory is found along path, fallback to XTBHOME
-    if [[ -z $xtb_manpath ]] ; then
-      debug "Could not identify xtb manual path."
-      # Assume if XTBHOME is set, it is the root directorry and contains the man directory
-      if [[ -n $XTBHOME ]] ; then
-        debug "Old variable XTBHOME is set ($XTBHOME)."
-        if [[ -d "$XTBHOME/man" ]] ; then
-          xtb_manpath="$XTBHOME/man"
-          debug "Fallback xtb_manpath=$xtb_manpath"
-        else 
-          fatal "Manual directory '$XTBHOME/man' is missing."
-        fi
-      else
-        fatal "The fallback environment variable 'XTBHOME' is unset."
-      fi
-    else
-      # Add the found directory to the manpath
-      add_to_MANPATH "$xtb_manpath"
-    fi
+    load_path_settings
   fi
   debug "XTBPATH=$XTBPATH (XTBHOME=$XTBHOME)"
   debug "$( declare -p MANPATH 2>&1 )"
@@ -207,6 +161,13 @@ get_bindir ()
   local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
   resolve_file=$( expand_tilde_path "$resolve_file" )
+  
+  # Check if anything exists in this location, otherwise abort.
+  if [[ ! -e "$resolve_file" ]] ; then
+    fatal "It appears, that '$resolve_file' does not exist."
+  else
+    debug "File resolved to '$resolve_file' and does exist."
+  fi
 
   # resolve $resolve_file until it is no longer a symlink
   while [[ -h "$resolve_file" ]] ; do 
@@ -451,6 +412,54 @@ add_to_MANPATH ()
     debug "$MANPATH"
 }
 
+add_to_LD_PATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$LD_LIBRARY_PATH: =~ :$1: ]] || LD_LIBRARY_PATH="$1:$LD_LIBRARY_PATH"
+    debug "$LD_LIBRARY_PATH"
+}
+
+add_to_PYTHONPATH ()
+{
+    [[ -d "$1" ]] || fatal "Cowardly refuse to add non-existent directory to PATH."
+    [[ -x "$1" ]] || fatal "Cowardly refuse to add non-accessible directory to PATH."
+    [[ :$PYTHONPATH: =~ :$1: ]] || PYTHONPATH="$1:$PYTHONPATH"
+    debug "$PYTHONPATH"
+}
+
+load_path_settings ()
+{
+  debug "Using path settings."
+  # Assume if there is no special configuration applied which sets the install directory
+  # that the scriptdirectory is also the root directory of xtb
+  xtb_install_root=${xtb_install_root:-$scriptpath}
+  if XTBHOME=$( get_bindir "$xtb_install_root/bin" "xTB root directory" ) ; then
+    debug "XTBHOME successfully resolved: '$XTBHOME'"
+  else
+    fatal "Could not set XTBHOME. Provided xtb root directory in settings might be wrong."
+  fi
+  XTBPATH="${XTBHOME}/share/xtb:${XTBHOME}:${HOME}"
+  if [[ -d "${XTBHOME}/bin" ]] ; then
+    add_to_PATH "${XTBHOME}/bin"
+  else
+    fatal "Cannot locate bin directory in '$XTBHOME'."
+  fi
+  # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
+  [[ -d "${XTBHOME}/python" ]] && add_to_PYTHONPATH "${XTBHOME}/python"
+  [[ -d "${XTBHOME}/lib" ]] && add_to_LD_PATH "${XTBHOME}/lib"
+  [[ -d "${XTBHOME}/scripts" ]] && add_to_PATH "${XTBHOME}/scripts"
+  # Add the manual path, even though we probably won't need it
+  # Old version
+  [[ -d "${XTBHOME}/man" ]] && add_to_MANPATH "${XTBHOME}/man"
+  # New Version
+  [[ -d "${XTBHOME}/share/man" ]] && add_to_MANPATH "${XTBHOME}/share/man"
+  export XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
+  # If for whatever reason one of these variables is unset, then write the error in the debug log, 
+  # instead of writing it directly to the error channel
+  debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
+}
+
 #
 # Get settings from configuration file
 #
@@ -628,19 +637,23 @@ write_submit_script ()
 			EOF
     else
       # Use path settings
+      # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
     	cat >&9 <<-EOF
-			export PATH="$XTBPATH/bin:\$PATH"
+			export XTBHOME="$XTBHOME"
 			export XTBPATH="$XTBPATH"
-			# Setting MANPATH is not necessary in scripted mode.
+			export PATH="$XTBHOME/bin:\$PATH"
+			export LD_LIBRARY_PATH="$XTBHOME/lib:\$LD_LIBRARY_PATH"
+			# Setting MANPATH/ PYTHONPATH is not necessary in scripted mode.
 			EOF
     fi
 
     cat >&9 <<-EOF
 		# Test the command
 		command -v "$xtb_callname" || exit 1
-		export OMP_NUM_THREADS="$requested_numCPU"
-		export MKL_NUM_THREADS="$requested_numCPU"
 		export OMP_STACKSIZE="${requested_memory}m"  
+		export OMP_NUM_THREADS="$requested_numCPU"
+		export OMP_MAX_ACTIVE_LEVELS=1
+		export MKL_NUM_THREADS="$requested_numCPU"
 		ulimit -s unlimited || exit 1
 
 		exit_status=0
@@ -736,7 +749,7 @@ runxtbrc_loc="$(get_rc "$scriptpath" "/home/$USER" "/home/$USER/.config/" "$PWD"
 debug "runxtbrc_loc=$runxtbrc_loc"
 
 if [[ -n $runxtbrc_loc ]] ; then
-  # shellcheck source=/home/te768755/devel/runxtb.bash/runxtb.rc
+  # shellcheck source=./runxtb.rc
   . "$runxtbrc_loc"
   message "Configuration file '$runxtbrc_loc' applied."
 else
@@ -829,8 +842,12 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            This will also set the callname and ignore an empty commandline.
     #hlp            Assumed format for <ARG>: ./relative/or/absolute/path/to/XTBHOME/bin/'callname'
     B) 
-      xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )"
-      xtb_callname="${OPTARG##*/}"
+      if xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )" ; then
+        xtb_callname="${OPTARG##*/}"
+        debug "Using installation in '$xtb_install_root' with name '$xtb_callname'."
+      else
+        fatal "Could not extract XTBHOME and name of application. Abort"
+      fi
       ;;
     #hlp   -C <ARG> Change the callname of the script.
     #hlp            This can be useful to request a different executable from the package.
@@ -911,40 +928,24 @@ fi
 message "This is not the original xtb program!"
 message "This is only a wrapper to set paths and variables."
 
-if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
   debug "Using modules."
   # Loading the modules should take care of everything except threats
   load_xtb_modules || fatal "Failed loading modules."
 else
-  debug "Using path settings."
-  # Assume if there is no special configuration applied which sets the install directory
-  # that the scriptdirectory is also the root directory of xtb
-  XTBPATH="${xtb_install_root:-$scriptpath}"
-  if [[ -d "${XTBPATH}/bin" ]] ; then
-    add_to_PATH "${XTBPATH}/bin"
-  else
-    fatal "Cannot locate bin directory in '$XTBPATH'."
-  fi
-  # Add auxiliary directories to PATH, i.e. where (python) scripts may be stored
-  [[ -d "${XTBPATH}/python" ]] && add_to_PATH "${XTBPATH}/python"
-  [[ -d "${XTBPATH}/scripts" ]] && add_to_PATH "${XTBPATH}/scripts"
-  # Add the manual path, even though we won't need it
-  [[ -d "${XTBPATH}/man" ]] && add_to_MANPATH "${XTBPATH}/man"
-  export XTBPATH PATH MANPATH
-  # If for whatever reason one of these variables is unset, then write the error in the debug log, 
-  # instead of writing it directly to the error channel
-  debug "$( declare -p XTBPATH PATH MANPATH 2>&1 )"
+  load_path_settings || fatal "Failed initialising with path settings."
 fi
 
 # Check whether we have the right executable
 debug "$xtb_callname is '$( command -v "$xtb_callname")'" || fatal "Command not found: $xtb_callname"
 
 # Set and export other environment variables
-OMP_NUM_THREADS="$requested_numCPU"
-MKL_NUM_THREADS="$requested_numCPU"
 OMP_STACKSIZE="$requested_memory"
+OMP_NUM_THREADS="$requested_numCPU"
+OMP_MAX_ACTIVE_LEVELS=1
+MKL_NUM_THREADS="$requested_numCPU"
 
-export OMP_NUM_THREADS MKL_NUM_THREADS OMP_STACKSIZE
+export OMP_STACKSIZE OMP_NUM_THREADS OMP_MAX_ACTIVE_LEVELS MKL_NUM_THREADS
 ulimit -s unlimited || fatal "Something went wrong unlimiting stacksize."
 debug "Settings:    xtb_install_root=$xtb_install_root (= XTBPATH)"
 debug "(current)    xtb_callname=$xtb_callname"

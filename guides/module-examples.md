@@ -1,10 +1,19 @@
 # Example for module files
 
 The module system makes setting up different versions of software much easier to maintain.
-Module files can be very simple, or very complicated.
+Module files can be very simple, or very complex.
 All they have to do though is to set the appropriate paths and variables for the execution.
 I have used modified versions from CLAIX18 (the RWTH Aachen cluster),
-which I have cleaned for this repository.
+which I have cleaned for this repository. 
+
+*Disclaimer:* 
+I am no longer affiliated with RWTH Aachen, and I am not using the module system in my current setup.
+Therefore the example files provided below are not tested in a working environment. 
+I have tried to incorporate some of the changes in the setup given in the xtb manual,
+see [read the docs](https://xtb-docs.readthedocs.io/en/latest/contents.html). 
+Please also see my guide on [how to set up xtb for runxtb](set-up.md).
+Use the files provided below as a starting point for your own templates and 
+review them carefully before use.
 
 ## Root module
 
@@ -16,7 +25,7 @@ If it is your own home directory, you can also use `$::env(HOME)` as an argument
 The installation variable `XTBHOME` also has to be adjusted accordingly.
 It currently assumes that the software is stored 
 in a directory `${PROJECTHOME}/local/$modulename/$modulename-$version`,
-which could resolve to `/home/polyluxus/local/xtb/xtb-6.2.0` for the
+which could resolve to `/home/polyluxus/local/xtb/xtb-6.2.3` for the
 most recent version of xtb.
 The variable `version` will be set from the version module, see below.
 
@@ -32,7 +41,7 @@ The variable `version` will be set from the version module, see below.
 set modulename "xtb"
 
 # Home directory of the installation
-set PROJECTHOME "/home/rwth0425"
+set PROJECTHOME "/home/polyluxus"
 
 # Define local variable with path to installation software
 # version will be set by referring module file
@@ -46,6 +55,7 @@ proc ModulesHelp { } {
   puts stderr "*** This module initialises the $modulename $version environment ***"
   puts stderr "    An extended tight-binding semi-empirical program package        " 
   puts stderr "    Please contact xtb@thch.uni-bonn.de for details.                "
+  puts stderr "    See also: https://github.com/grimme-lab/xtb                     "
 }
 
 # Short description (preferably 1 line) what the loaded software does,
@@ -82,17 +92,29 @@ switch [module-info mode] {
   }
 }
 
-# XTBPATH replaces the old XTBHOME from version >= 6.0 
+# XTBHOME is the root directory of the loaded xtb version
+setenv        XTBHOME  $XTBHOME
+
+# Recommendations for loading:
+prepend-path  XTBPATH  $::env(HOME)
 prepend-path  XTBPATH  $XTBHOME
+prepend-path  XTBPATH  ${XTBHOME}/share/xtb
 
 # The following paths need to be set/adjusted for the 6.0 distributions
 prepend-path  PATH     $XTBHOME/bin
-prepend-path  MANPATH  $XTBHOME/man
+# Old MANPATH (~ 6.0)
+if { [file isdirectory $XTBHOME/man] } {
+  prepend-path  MANPATH  $XTBHOME/man
+}
+# New MANPATH (~ 6.2.x)
+if { [file isdirectory $XTBHOME/share/man] } {
+  prepend-path  MANPATH  $XTBHOME/share/man
+}
 # Include libraries
 if { [file isdirectory $XTBHOME/lib] } {
   prepend-path  LD_LIBRARY_PATH     $XTBHOME/lib
 }
-# Include the scripts directory, if it exists
+# Include the scripts directory, if it exists (very old, or very custom)
 if { [file isdirectory $XTBHOME/scripts] } {
   prepend-path  PATH     $XTBHOME/scripts
 }
@@ -109,7 +131,8 @@ The version module is only necessary to set the `version` variable, so that
 the root module will find the correct software path.
 
 The variable `module_base_path` needs to be adjusted to point to 
-the directory of the root module.
+the directory of the root module, the filename in the last line
+also needs to be adjusted to point to the root module, which is defined above.
 
 ```
 #%Module1.0###-*-tcl-*-#########################################################
@@ -117,19 +140,23 @@ the directory of the root module.
 ## XTB modulefile
 ##
 
-# For the local install 
-set module_base_path "/home/rwth0425/modules/source"
+# For the local install (modify this to the correct path)
+set module_base_path "/home/polyluxus/modules/source"
 
 # Needs to be adjusted for what is to be loaded
 set MAJORVERSION "6"
 set MINORVERSION "2"
-set REVISION     "0"
+set REVISION     "3"
 
 # Will be read by the source module file
 set version "$MAJORVERSION.$MINORVERSION.$REVISION"
 
-# Load the source module file
-source "$module_base_path/xtb6/xtb6"
+# Load the source module file (needs to be adjusted to the name used for the root module above)
+source "$module_base_path/xtb/xtb"
 ```
 
 If no version control is wanted, one module with hard-coded paths should also do the trick.
+
+The version module should be placed in a directory which is found in the module path environment variable, 
+it could be, using the example above: `/home/polyluxus/modules/load/xtb/xtb_v6.2.3`.
+
