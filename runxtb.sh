@@ -631,11 +631,17 @@ write_submit_script ()
 			# Loading the modules should take care of everything except threads
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
-			module load ${load_modules[*]} 2>&1 || exit 1
+			EOF
+
+      for mod in "${load_modules[@]}" ; do
+        cat >&9 <<-EOF
+				module load "${mod}"
+				EOF
+      done
+
 			# Redirect because otherwise it would go to the error output, which might be bad
 			# Exit on error, which it might not do given a specific implementation
 			 
-			EOF
     else
       # Use path settings
       # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
