@@ -971,12 +971,15 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
 
   if [[ $run_interactive =~ [Ss][Uu][Bb] ]] ; then
     if [[ $request_qsys =~ [Pp][Bb][Ss] ]] ; then
-      submit_id="Submitted as $(qsub "$submitscript")" || exit_status="$?"
+      qsub_bin=$(command -v qusb 2>&1) || fatal "Command qsub was not found."
+      submit_id="Submitted as $("$qsub_bin" "$submitscript" 2>&1)" || exit_status="$?"
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
-      submit_id="$(bsub < "$submitscript" 2>&1 )" || exit_status="$?"
+      bsub_bin=$(command -v busb 2>&1) || fatal "Command bsub was not found."
+      submit_id="$("$bsub_bin" < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"
     elif [[ $request_qsys =~ [Ss][Ll][Uu][Rr][Mm] ]] ; then
-      submit_id="$(sbatch "$submitscript" )" || exit_status="$?"
+      sbatch_bin=$(command -v sbatch 2>&1) || fatal "Command sbatch was not found."
+      submit_id="$("$sbatch_bin" "$submitscript" 2>&1)" || exit_status="$?"
     else
       fatal "Unrecognised queueing system '$request_qsys'."
     fi
