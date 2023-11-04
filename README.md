@@ -23,6 +23,8 @@ Briefly:
 
 Obtain the latest version of xtb (and crest) from its 
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest) page.
+While you're at it, you might want to pick up crest, too. It is also available at 
+[GithUb](https://github.com/crest-lab/crest/releases/latest).
 Pick a directory, where you would like to install these packages, e.g. 
 a separate user (here: software) and the root directory `/home/software/chemsoft/xtb`.
 Unpack the downloaded xtb archives (this may create a new directory for the downloaded version,
@@ -144,7 +146,7 @@ please include the debug output when submitting a bug report to the
 ## License (GNU General Public License v3.0)
 
 runxtb.bash - a wrapper script for xtb
-Copyright (C) 2019 - 2020 Martin C Schwarzer
+Copyright (C) 2019 - 2023 Martin C Schwarzer
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
