@@ -287,7 +287,7 @@ fi
 # Initialise Variables
 OPTIND=1
 
-while getopts :d:qh options ; do
+while getopts :d:cqh options ; do
   case $options in
     #hlp OPTIONS:
     #hlp 
@@ -298,6 +298,11 @@ while getopts :d:qh options ; do
     d) 
       crest_dir="$OPTARG"
       ;;
+    #hlp   -c       Create a 'coord' file. [Default: no]
+    #hlp            This requires openbabel to be installed.
+    c)
+      use_openbabel="yes"
+      ;;  
     #hlp   -q       Stay quiet! (Only this startup script)
     #hlp            May be specified multiple times to be more forceful.
     q) 
@@ -348,7 +353,11 @@ if [[ -r "xtbopt.xyz" ]] ; then
   debug "Structurefile is readable: $structure_file_name"
   # Copy the new structure file to the crest directory (it is no longer necessary to be named coord, but that is still the default)
   # Maybe get rid of the obabel dependency in the process or make it optional
-  convert_xyz_to_coord "$structure_file_name" "$crest_dir/coord"
+  if [[ "$use_openbabel" =~ [Yy][Ee][Ss] ]] ; then
+    convert_xyz_to_coord "$structure_file_name" "$crest_dir/coord"
+  else
+    message "$( cp -v -- "$structure_file_name" "$crest_dir" )"
+  fi
 elif [[ -r "xtbopt.coord" ]] ; then
   # Copy the found optimised structure (in tmol format) to the crest directory
   message "Found optimised molecular structure in Turbomole format."
@@ -374,7 +383,11 @@ else
         fi
       else
 	# Use thes first file to consider
-        convert_xyz_to_coord "$structure_file" "$crest_dir/coord"
+        if [[ "$use_openbabel" == "yes" ]] ; then
+          convert_xyz_to_coord "$structure_file" "$crest_dir/coord"
+        else
+          message "$( cp -v -- "$structure_file_name" "$crest_dir" )"
+        fi
         break
       fi
     fi

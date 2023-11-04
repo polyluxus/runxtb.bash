@@ -13,7 +13,6 @@
 #  (Without including the bin directory/ executable name; avoid trailing slashes.)
 #
 #  xtb_install_root="/path/to/xtb/root"
-#  xtb_install_root="~polyluxus/chemsoft/xtb/xtb_6.2.3"
    xtb_install_root=""
 #
 ## Set the name of the executable.
@@ -44,6 +43,18 @@
 #
 ## This can be overwritten with an explicit empty argument to -o:
 ##   runxtb -o '' [other opts] <coord> [xtb options]
+
+## Use openbabel to convert xyz to coord in crest.prepare.
+## This has currently no effect on runxtb.
+#
+#  use_openbabel="yes"
+   use_openbabel="no"
+#  
+## This can be turned on with crest.prepare -c from the command line.
+#
+## Set a default name (this must be set in the settings file)
+#
+   obabel_cmd="obabel"
 
 ## Set default mode, where interactive means that it is calculated immediately.
 ## (yes: interactive; no: write script; sub: write and submit)

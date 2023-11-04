@@ -5,7 +5,7 @@
 # Tis configuration script is part of 
 # runxtb.bash -- 
 #   a repository to set the environment for the xtb program
-# Copyright (C) 2019 - 2020 Martin C Schwarzer
+# Copyright (C) 2019 - 2023 Martin C Schwarzer
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -297,6 +297,16 @@ recover_rc ()
     if read_boolean ; then ask_files ; fi
   fi
   debug "use_outputfile_name=$use_outputfile_name"
+
+  use_obabel="$use_openbabel"
+  if [[ -z $use_obabel ]] ; then
+    ask_obabel
+  else  
+    message "Recovered default setting 'use_openbabel=$use_obabel'"
+    ask "Would you like to change this setting?"
+    if read_boolean ; then ask_obabel ; fi
+  fi
+  debug "use_obabel=$use_obabel"
 
   use_interactivity="$run_interactive"
   if [[ -z $use_interactivity ]] ; then
@@ -610,6 +620,25 @@ ask_files ()
   debug "use_outputfile_name=$use_outputfile_name"
 }
 
+ask_obabel ()
+{
+  ask "Do you want to use OpenBabel to convert xyz files to tmol format for crest.prepare?"
+  use_obabel=$(read_yes_no)
+  debug "use_obabel=$use_obabel"
+  if [[ "$use_obabel" =~ ^[Yy]([Ee]([Ss])?)?$ ]] ; then
+    obabel_cmd="${obabel_cmd:-obabel}"
+    if ( command -v "$obabel_cmd" &> /dev/null ) ; then
+      debug "Command '$obabel_cmd' is available."
+    else
+      warnung "Command '$obabel_cmd' appears not to be available."
+      message "Switching off conversion option."
+      use_obabel="no"
+    fi
+  else
+    use_obabel="no"
+  fi 
+}
+
 ask_all_settings ()
 {
   ask_installation_path
@@ -617,6 +646,7 @@ ask_all_settings ()
   ask_environment_vars
   ask_chattyness
   ask_files
+  ask_obabel
   ask_queueing_system
 }
 
@@ -689,6 +719,19 @@ print_settings ()
   else
     echo   "   output_file=\"$use_outputfile_name\""
   fi
+  echo     "#  "
+  echo     "###"
+
+  echo     "## Use openbabel to convert xyz to coord in crest.prepare."
+  echo     "## This has currently no effect on runxtb."
+  echo     "#"
+  echo     "   use_openbabel=\"$use_obabel\""
+  echo     "#  "
+  echo     "## This can be turned on with crest.prepare -c from the command line."
+  echo     "#"
+  echo     "## Set a default name (this must be set in the settings file)"
+  echo     "#"
+  echo     "   obabel_cmd=\"$obabel_cmd\""
   echo     "#  "
   echo     "###"
 
