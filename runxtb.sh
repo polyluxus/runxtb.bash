@@ -78,7 +78,10 @@ fatal ()
 debug ()
 {
   # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
-  echo "DEBUG  : (${FUNCNAME[1]}) $*" >&4
+  local line
+  while read -r line || [[ -n "$line" ]] ; do
+    echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
+  done <<< "$*"
 }    
 
 #

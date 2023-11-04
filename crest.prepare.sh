@@ -79,7 +79,10 @@ fatal ()
 debug ()
 {
   # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
-  echo "DEBUG  : (${FUNCNAME[1]}) $*" >&4
+  local line
+  while read -r line || [[ -n "$line" ]] ; do
+    echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
+  done <<< "$*"
 }    
 
 #
@@ -309,7 +312,8 @@ if [[  "$crest_dir" != '.' ]] ; then
     if try_to_delete=$( rmdir -v -- "$crest_dir" 2>&1 ) ; then
       debug "Deletion of directory: $try_to_delete"
     else
-      debug "Deletion failed. Message(s): $try_to_delete"
+      debug "Deletion failed. Message(s):"
+      debug "$try_to_delete"
       warning "Directory exists and cannot be deleted: $crest_dir"
       fatal "Cannot recover; please check the directory manually."
     fi
