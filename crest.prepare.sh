@@ -299,9 +299,21 @@ done
 
 # Set a default target, if none was provided
 crest_dir="${crest_dir:-crest}"
+debug "Target is: $crest_dir"
+# Strip trailing slash
+crest_dir="${crest_dir%/}"
 if [[  "$crest_dir" != '.' ]] ; then
   # If the directory is not pwd, then check if it exists (as existing directories cannot be created)
-  [[ -d "$crest_dir" ]] && fatal "Directory exists: $crest_dir"
+  if [[ -e "$crest_dir" ]] ; then
+    debug "It exists: $crest_dir"
+    if try_to_delete=$( rmdir -v -- "$crest_dir" 2>&1 ) ; then
+      debug "Deletion of directory: $try_to_delete"
+    else
+      debug "Deletion failed. Message(s): $try_to_delete"
+      warning "Directory exists and cannot be deleted: $crest_dir"
+      fatal "Cannot recover; please check the directory manually."
+    fi
+  fi
   message "$( mkdir -v -- "$crest_dir" )" || fatal "Failed to create '$crest_dir'."
 else
   # The pwd is the target directory, treat it like a newly created one
