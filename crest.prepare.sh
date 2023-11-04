@@ -212,6 +212,23 @@ get_rc ()
   echo "$return_runxtbrc_loc"
 }
 
+# OpenBabel helper function
+
+convert_xyz_to_coord ()
+{
+  # Convert the coordinates from xmol to tmol format with Open Babel
+  # Usage: function source target
+  (( $# == 2 )) || fatal "Wrong call of function. Raise an issue!."
+  # Check for the dependency, allow for it to be set in the rc settings
+  # This could or should come from the configuration, if it doesn't, use the default
+  obabel_cmd="${obabel_cmd:-obabel}"
+  obabel_cmd_found="$( command -v "$obabel_cmd" )" || fatal "Command not found: $obabel_cmd"
+  local source_file="$1"
+  local target_file="$2"
+  backup_if_exists "$target_file"
+  message "$( "$obabel_cmd_found" -ixyz "$source_file" -oTmol -O"$target_file" 2>&1 )" || fatal "Failure in Open Babel."
+}
+
 ###
 #
 # MAIN
@@ -326,18 +343,18 @@ fi
 
 # Check for structure files
 if [[ -r "xtbopt.xyz" ]] ; then
-  # Convert the coordinates from an xtb optimisation from xmol to tmol format with Open Babel
+  # Ideally copy optimised structure information to crest-directory, set the filename:
+  structure_file_name="xtbopt.xyz"
+  debug "Structurefile is readable: $structure_file_name"
   # Copy the new structure file to the crest directory (it is no longer necessary to be named coord, but that is still the default)
-  # Check for the dependency, allow for it to be set in the rc settings
-  obabel_cmd="${obabel_cmd:-obabel}"
-  obabel_cmd_found="$( command -v "$obabel_cmd" )" || fatal "Command not found: $obabel_cmd"
-  backup_if_exists "$crest_dir/coord"
-  message "$( "$obabel_cmd_found" -ixyz "xtbopt.xyz" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
+  # Maybe get rid of the obabel dependency in the process or make it optional
+  convert_xyz_to_coord "$structure_file_name" "$crest_dir/coord"
 elif [[ -r "xtbopt.coord" ]] ; then
   # Copy the found optimised structure (in tmol format) to the crest directory
   message "Found optimised molecular structure in Turbomole format."
   backup_if_exists "$crest_dir/coord"
   message "$( cp -v -- "xtbopt.coord" "$crest_dir/coord" )"
+  # Nothing further needs to be done
 else
   warning "No optimised molecular structure found in current directory."
   # Look for other structure files
@@ -346,16 +363,18 @@ else
       message "Found '$structure_file' and will use this molecular structure instead."
       message "It is recommended to preoptimise the molecular structure with xtb at the same level"
       message "as the conformational search with crest shall be conducted, as it will be used as a reference for sanity checks."
-      if [[ "$structure_file" == "coord" ]] ; then
-        # If the crest directory is pwd, and a 'coord' file exists, there is nothing left to prepare
-        [[ "$crest_dir" == '.' ]] && fatal "'$structure_file' and '$crest_dir/coord' are the same file."
-        message "$( cp -v -- "$structure_file" "$crest_dir/coord" )"
-        break
+      if [[ "${structure_file##*.}" == "coord" ]] ; then
+        # Assume that a file ending on coord is in the right format already, just try to copy
+        if copied_structure_file="$( cp -v -- "$structure_file" "$crest_dir/coord" 2>&1 )" ; then
+	  message "$copied_structure_file"
+          break
+        else
+	  debug "$copied_structure_file"
+	  fatal "Copying the structure data file failed."
+        fi
       else
-        obabel_cmd="${obabel_cmd:-obabel}"
-        obabel_cmd_found="$( command -v "$obabel_cmd" )" || fatal "Command not found: $obabel_cmd"
-        backup_if_exists "$crest_dir/coord"
-        message "$( "$obabel_cmd_found" -ixyz "$structure_file" -oTmol -O"$crest_dir/coord" 2>&1 )" || fatal "Failure in Open Babel."
+	# Use thes first file to consider
+        convert_xyz_to_coord "$structure_file" "$crest_dir/coord"
         break
       fi
     fi
