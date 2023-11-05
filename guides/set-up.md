@@ -5,17 +5,17 @@
 
 Obtain the latest version of xtb from its 
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest) page.
-There you will also find the crest binary.
+You can find the crest binary also on [GitHub](https://github.com/crest-lab/crest/releases/latest).
 You may also want to check the manual of it on 
 [read the docs](https://xtb-docs.readthedocs.io/en/latest/contents.html).
-At the time of writing the following files should be downloaded:
-`xtb-200316.tar.xz` and `crest-200219.tgz` corresponding to
-xtb v6.2.3 and crest v.2.9.
+At the time of writing, the following versions were the most recent:
+* xtb v6.6.i1 
+* crest v.2.12
 
 Pick a directory, where you would like to install the packages.
-For myself I chose to install it as a separate user, e.g. software, and I picked the root directory as:
+For myself I chose to install it locally:
 ```
-/home/software/chemsoft/xtb
+/home/martin/local/xtb
 ```
 Change to this directory and unpack the downloaded xtb archive:
 ```
@@ -23,7 +23,7 @@ tar xf /path/to/xtb-*.tar.xz
 ```
 This will create a new sub-directory. In the above mentioned case this will be:
 ```
-/home/software/chemsoft/xtb/xtb_6.2.3
+/home/software/chemsoft/xtb/xtb_6.6.1
 ```
 For the installation of `runxtb` this will also be `xtb_install_root`.
 There are plenty of other ways to do this, but if you are wondering about these,
@@ -34,7 +34,7 @@ I found that bundling the crest executable into the repository works best.
 Therefore, change to the `bin` directory of the newly created directory;
 for the example this would be:
 ```
-/home/software/chemsoft/xtb/xtb_6.2.3/bin
+/home/software/chemsoft/xtb/xtb_6.6.1/bin
 ```
 Simply unpack the crest archive here, as in the past it usually only contained the crest executable:
 ```
@@ -64,7 +64,7 @@ Please follow the setup and the examples in the xtb documentation to run calcula
 Get the latest release of the repository from 
 [GitHub](https://github.com/polyluxus/runxtb.bash/releases/latest).
 I personally install it alongside the original binary, i.e. 
-`/home/software/chemsoft/xtb`.
+`/home/martin/local/xtb`.
 Unpack the contents, and if necessary rename the directory.
 I just let GitHub do the packing, since there is no compiling to be done, you can just work
 with the source code. If I remember correctly, GitHub simply uses the tag name for the
@@ -72,7 +72,7 @@ created archive file. So depending on your taste and organization of directories
 you might want to move this.
 Let's assume we have extracted the content to the following directory:
 ```
-/home/software/chemsoft/xtb/runxtb.bash_0.4.0
+/home/martin/local/xtb/runxtb.bash_0.5.0
 ```
 You can of course also clone this repository.
 
@@ -134,7 +134,7 @@ If you are not sure, or using it the first time, these are the basic steps for w
 
 3. The conformational check, or conformer-rotamer-ensemble (CRE), can be done with crest.
    The little script `crest.prepare` simply takes a `<XYZ>` (if found `xtbopt.xyz`) from the current directory, 
-   converts it to a `coord` (via Open Babel), and puts it into a directory called `crest`.
+   (optionally converts it to a `coord` via Open Babel), and puts it into a directory called `crest`.
    (Run `crest.prepare -h` for possible options.)
    On default settings, for example:
    ```
@@ -144,14 +144,14 @@ If you are not sure, or using it the first time, these are the basic steps for w
    Now you are ready to run the calculation. If you have followed the instructions above, this can be done with
 
    ```
-   runxtb -C crest -- -nmr -gbsa <SOLVENT> -chrg <INT> -uhf <INT>
+   runxtb -C crest -- <xtbopt.xyz> -nmr -gbsa <SOLVENT> -chrg <INT> -uhf <INT>
    ``` 
-   The output of this step will  write to `crest.runxtb.out`.
+   The output of this step will  write to `xtbopt.runxtb.out`.
    This might take a few minutes, or longer depending on the molecule you chose.
    For larger molecules the submit function (`-s` or `-S`) may come in handy.
    Check the output. If everything went well, you will have a file `crest_best.xyz` with the lowest lying conformation.
 
-   Now testing is complete.
+   Now testing should be complete.
 
-(Martin; 2020-04-09; wrapper version 0.4.0)
+(Martin; 2023-11-05; wrapper version 0.5.0)
 

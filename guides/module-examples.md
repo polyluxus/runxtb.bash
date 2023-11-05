@@ -13,7 +13,11 @@ I have tried to incorporate some of the changes in the setup given in the xtb ma
 see [read the docs](https://xtb-docs.readthedocs.io/en/latest/contents.html). 
 Please also see my guide on [how to set up xtb for runxtb](set-up.md).
 Use the files provided below as a starting point for your own templates and 
-review them carefully before use.
+review them carefully before use.  
+Please note that this guide was outdated already in 2020 as you can roughly calculate that back from 
+the used versions.
+
+(Martin; 2023-11-05; wrapper version 0.5.0)
 
 ## Root module
 
