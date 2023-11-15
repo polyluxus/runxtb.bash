@@ -364,6 +364,12 @@ load_xtb_modules ()
   # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
   # The new Lmod module system throws errors when loading all modules sequentially in one
   # command, thus they are now loaded sequentially.
+  # Also checks if on RWTH cluster as the intel toolchain as to be unloaded before the foss
+  # toolchain can be loaded without throwing errors.
+  if [[ $(uname -n) == *"rwth"* ]]; then
+    module unload intel
+  fi
+
   for mod in "${load_modules[@]}" ; do
     module load "${mod}" &>> "$tmpfile" || fatal "Failed to load module."
   done
