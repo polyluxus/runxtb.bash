@@ -638,7 +638,9 @@ write_submit_script ()
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
 			EOF
-
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
+        echo "module unload intel" >&9
+      fi
       for mod in "${load_modules[@]}" ; do
         cat >&9 <<-EOF
 				module load "${mod}"
