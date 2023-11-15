@@ -367,7 +367,7 @@ load_xtb_modules ()
   # Also checks if on RWTH cluster as the intel toolchain as to be unloaded before the foss
   # toolchain can be loaded without throwing errors.
   if [[ $(uname -n) == *"rwth"* ]]; then
-    module unload intel
+    module unload intel &>> "$tmpfile"
   fi
 
   for mod in "${load_modules[@]}" ; do
