@@ -4,7 +4,7 @@
 #
 # crest.prepare.sh --
 #   a script to copy files needed for CREST into a new directory
-# Copyright (C) 2019 - 2023  Martin C Schwarzer
+# Copyright (C) 2019 - 2024  Martin C Schwarzer
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 #hlp   Script requires Open Babel.
 #hlp
 #hlp LICENSE:
-#hlp   crest.prepare.sh  Copyright (C) 2019 - 2023  Martin C Schwarzer
+#hlp   crest.prepare.sh  Copyright (C) 2019 - 2024  Martin C Schwarzer
 #hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software,
 #hlp   and you are welcome to redistribute it under certain conditions;
 #hlp   please see the license file distributed alongside this repository,

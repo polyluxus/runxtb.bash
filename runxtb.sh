@@ -4,7 +4,7 @@
 #
 # runxtb.sh --
 #   a wrapper script to apply an environment for xtb
-# Copyright (C) 2019 - 2023  Martin C Schwarzer
+# Copyright (C) 2019 - 2024  Martin C Schwarzer
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 #hlp   '.bashrc', '.profile', etc.
 #hlp
 #hlp LICENSE:
-#hlp   runxtb.sh  Copyright (C) 2019 - 2023  Martin C Schwarzer
+#hlp   runxtb.sh  Copyright (C) 2019 - 2024  Martin C Schwarzer
 #hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software,
 #hlp   and you are welcome to redistribute it under certain conditions;
 #hlp   please see the license file distributed alongside this repository,

@@ -146,7 +146,7 @@ please include the debug output when submitting a bug report to the
 ## License (GNU General Public License v3.0)
 
 runxtb.bash - a wrapper script for xtb
-Copyright (C) 2019 - 2023 Martin C Schwarzer
+Copyright (C) 2019 - 2024 Martin C Schwarzer
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
