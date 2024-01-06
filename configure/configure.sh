@@ -2,8 +2,8 @@
 
 ###
 #
-# Tis configuration script is part of 
-# runxtb.bash -- 
+# This configuration script is part of
+# runxtb.bash --
 #   a repository to set the environment for the xtb program
 # Copyright (C) 2019 - 2023 Martin C Schwarzer
 #
@@ -48,14 +48,14 @@ fatal ()
 debug ()
 {
     echo    "DEBUG   : $*" >&4
-}    
+}
 
 ask ()
 {
     echo    "Question: $*" >&3
 }
 
-# 
+#
 # Support functions
 #
 
@@ -93,7 +93,7 @@ expand_tilde_path ()
   fi
   echo "$return_string"
 }
-  
+
 check_exist_executable ()
 {
   local resolve_file="$1"
@@ -122,20 +122,20 @@ get_bindir ()
   fi
   
   #  resolve $resolve_file until it is no longer a symlink
-  while [ -h "$resolve_file" ]; do 
+  while [ -h "$resolve_file" ]; do
     link_target="$(readlink "$resolve_file")"
     if [[ $link_target == /* ]]; then
       debug "File '$resolve_file' is an absolute symlink to '$link_target'"
       resolve_file="$link_target"
     else
-      directory_name="$( dirname "$resolve_file" )" 
+      directory_name="$( dirname "$resolve_file" )"
       debug "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
       #  If $SOURCE was a relative symlink, we need to resolve 
       #+ it relative to the path where the symlink file was located
       resolve_file="$directory_name/$link_target"
     fi
   done
-  debug "File is '$resolve_file'" 
+  debug "File is '$resolve_file'"
   resolve_dir_name="$( dirname "$resolve_file")"
   directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
   if [ "$directory_name" != "$resolve_dir_name" ]; then
@@ -173,7 +173,7 @@ get_rc ()
     test_runxtbrc_dir="$1"
     shift
     if test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/.runxtbrc")" ; then
-      return_runxtbrc_loc="$test_runxtbrc_loc" 
+      return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
       continue
     elif test_runxtbrc_loc="$(test_rc_file "$test_runxtbrc_dir/runxtb.rc")" ; then 
@@ -191,7 +191,7 @@ recover_rc ()
   # Guess some locations where a rc file could be located
   runxtbrc_loc="$(get_rc "$scriptpath" "$runxtbrc_path" "/home/$USER" "/home/$USER/.config/" "$PWD")"
   debug "runxtbrc_loc=$runxtbrc_loc"
-  
+
   if [[ -n $runxtbrc_loc ]] ; then
     # shellcheck source=../runxtb.rc
     . "$runxtbrc_loc"
@@ -240,7 +240,7 @@ recover_rc ()
     if read_boolean ; then ask_threads ; fi
   fi
   debug "use_threads=$use_threads"
-     
+
   use_memory="$requested_memory"
   if [[ -z $use_memory ]] ; then
     ask_memory
@@ -319,7 +319,7 @@ recover_rc ()
   debug "use_interactivity=$use_interactivity"
 
   use_queue="$request_qsys"
-  # Try to recover old vrsion where it was bsub_project
+  # Try to recover old version where it was bsub_project
   use_qsys_project="${qsys_project:-$bsub_project}"
   if [[ -z $use_queue ]] ; then
     ask_qsys_details
@@ -364,7 +364,7 @@ recover_rc ()
     if read_boolean ; then ask_walltime ; fi
   fi
   debug "use_threads=$use_walltime"
-  
+
   return 0
 }
 
@@ -477,7 +477,7 @@ ask_modules ()
     if ( command -v module &> /dev/null ) ; then
       debug "Command 'module' is available."
     else
-      warnung "Command 'module' appears not to be available; continue anyway."
+      warning "Command 'module' appears not to be available; continue anyway."
       # Something like this was included, but is not really necessary
       # use_module_system="false"
       # warning "Switching the use of modules off."
@@ -488,7 +488,7 @@ ask_modules ()
     while [[ -z ${use_module_items[$module_index]} ]] ; do
       debug "Reading use_module_items[$module_index]"
       ask "What modules do need to be loaded?"
-      use_module_items[$module_index]=$(read_human_input)
+      use_module_items[module_index]=$(read_human_input)
       debug "use_module_items[$module_index]=${use_module_items[$module_index]}"
       if [[ ${use_module_items[$module_index]} =~ ^[[:space:]]*$ ]] ; then 
         debug "Finished reading modules."
@@ -529,7 +529,7 @@ ask_qsys_details ()
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
   case $test_queue in
-    [Pp][Bb][Ss]* ) 
+    [Pp][Bb][Ss]* )
       use_queue="pbs-gen"
       ;;
     [Bb][Ss][Uu][Bb]* )
@@ -606,7 +606,7 @@ ask_environment_vars ()
 
 ask_chattyness ()
 {
-  ask "What level of chattyness of runxtb would you like to set?" 
+  ask "What level of chattyness of runxtb would you like to set?"
   message "(0: all; 1: no info; 2: no warnings; >2: nothing)"
   use_chatty=$(read_integer)
   debug "use_chatty=$use_chatty"
@@ -677,7 +677,6 @@ print_settings ()
   echo     "#  "
   if [[ -z $use_xtbhome ]] ; then
     echo   "#  xtb_install_root=/path/to/xtbhome"
-    echo   "#  xtb_install_root='~polyluxus/chemsoft/xtb/xtb_6.3.pre2'"
   else
     echo   "   xtb_install_root=\"$use_xtbhome\""
   fi
@@ -694,7 +693,7 @@ print_settings ()
   echo     "## XTBHOME/xtb_callname"
   echo     "###"
 
-  echo     "## Set chattyness." 
+  echo     "## Set chattyness."
   echo     "## (0: all; 1: no info; 2: no warnings; >2: nothing)"
   echo     "#  "
   if [[ -z $use_chatty ]] ; then
@@ -816,7 +815,7 @@ create_bin_link ()
 {
   local link_target_path="$HOME/bin"
   local link_target_name link_target link_source
-    
+
   for link_target_name in "runxtb" "crest.prepare" ; do
     link_target="$link_target_path/$link_target_name"
     link_source="$runxtbrc_path/${link_target_name}.sh"
@@ -843,7 +842,7 @@ create_bin_link ()
 exec 3>&1
 
 # Enable debug mode
-if [[ "$1" == "debug" ]] ; then 
+if [[ "$1" == "debug" ]] ; then
   exec 4>&1
 else 
   exec 4> /dev/null 

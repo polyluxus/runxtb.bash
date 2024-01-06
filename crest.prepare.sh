@@ -2,7 +2,7 @@
 
 ###
 #
-# crest.prepare.sh -- 
+# crest.prepare.sh --
 #   a script to copy files needed for CREST into a new directory
 # Copyright (C) 2019 - 2023  Martin C Schwarzer
 #
@@ -24,21 +24,21 @@
 #hlp ===== Not Part of xTB =====
 #hlp DESCRIPTION:
 #hlp   This is a little helper script to set up a crest (via xTB) calculation.
-#hlp   
-#hlp   It basically creates a directory (optional) with a molecular 
+#hlp
+#hlp   It basically creates a directory (optional) with a molecular
 #hlp   structure in turbomole format called 'coord'.
 #hlp   Script requires Open Babel.
-#hlp  
+#hlp
 #hlp LICENSE:
 #hlp   crest.prepare.sh  Copyright (C) 2019 - 2023  Martin C Schwarzer
-#hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software, 
-#hlp   and you are welcome to redistribute it under certain conditions; 
+#hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software,
+#hlp   and you are welcome to redistribute it under certain conditions;
 #hlp   please see the license file distributed alongside this repository,
 #hlp   which is available when you type '${0##*/} license',
 #hlp   or at <https://github.com/polyluxus/runxtb.bash>.
 #hlp
 #hlp USAGE:
-#hlp   ${0##*/} [script options] 
+#hlp   ${0##*/} [script options]
 #hlp 
 
 #
@@ -68,7 +68,7 @@ warning ()
 fatal ()
 {
   exit_status=1
-  if (( stay_quiet <= 2 )) ; then 
+  if (( stay_quiet <= 2 )) ; then
     echo "ERROR  : $*" >&2
   else
     debug "(error  ) $*"
@@ -83,7 +83,7 @@ debug ()
   while read -r line || [[ -n "$line" ]] ; do
     echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
   done <<< "$*"
-}    
+}
 
 #
 # Print some helping commands
@@ -92,12 +92,12 @@ debug ()
 
 helpme ()
 {
-    local line
-    local pattern="^[[:space:]]*#hlp[[:space:]]?(.*)?$"
-    while read -r line; do
-      [[ "$line" =~ $pattern ]] && eval "echo \"${BASH_REMATCH[1]}\""
-    done < <(grep "#hlp" "$0")
-    exit 0
+  local line
+  local pattern="^[[:space:]]*#hlp[[:space:]]?(.*)?$"
+  while read -r line; do
+    [[ "$line" =~ $pattern ]] && eval "echo \"${BASH_REMATCH[1]}\""
+  done < <(grep "#hlp" "$0")
+  exit 0
 }
 
 backup_if_exists ()
@@ -105,17 +105,17 @@ backup_if_exists ()
   local move_source="$1"
   # File does not exist, then everithing is fine, return with status 0
   [[ -f "$move_source" ]] || return 0
-  # File exists, print a warning 
+  # File exists, print a warning
   warning "File '$move_source' already exists."
-  # make a backup 
+  # make a backup
   # (test default name first, if that exists, relegate to tool)
   local move_target="${move_source}.bak"
-  [[ -f "$move_target" ]] && move_target=$( mktemp "${move_target}.XXXX" ) 
+  [[ -f "$move_target" ]] && move_target=$( mktemp "${move_target}.XXXX" )
   # if moving failed for whatever reason, return with status 1
   message "Create backup: $( mv -v -- "$move_source" "$move_target" 2>&1 )" || return 1
 }
 
-# Auxiliary function to do what the bash usually does by itself 
+# Auxiliary function to do what the bash usually does by itself
 expand_tilde_path ()
 {
   local test_string="$1" return_string
@@ -161,7 +161,7 @@ get_bindir ()
       resolve_file="$directory_name/$link_target"
     fi
   done
-  debug "File is '$resolve_file'" 
+  debug "File is '$resolve_file'"
   resolve_dir_name="$( dirname "$resolve_file")"
   directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
   if [[ "$directory_name" != "$resolve_dir_name" ]] ; then
@@ -240,7 +240,7 @@ exec 3>&1
 if [[ "$1" == "debug" ]] ; then
   # Secret debugging switch
   exec 4>&1
-  shift 
+  shift
 else
   exec 4> /dev/null
 fi
@@ -252,7 +252,7 @@ stay_quiet="0"
 # Details about this script to be read from external files
 #
 
-# Where this script is located: 
+# Where this script is located:
 scriptpath="$( get_bindir "$0" "Directory of runxtb" )"
 # there should be a file with versioning information
 # shellcheck source=./VERSION
@@ -292,7 +292,7 @@ while getopts :d:cqh options ; do
     #hlp OPTIONS:
     #hlp 
     #hlp   -d <ARG> Use <ARG> as directory name to set up. [Default: crest]
-    #hlp            If <ARG> is '.', then skip creating a directory, 
+    #hlp            If <ARG> is '.', then skip creating a directory,
     #hlp            instead convert a found '*.xyz' to 'coord', or
     #hlp            rename existing 'xtbopt.coord' to 'coord'.
     d) 
@@ -313,10 +313,10 @@ while getopts :d:cqh options ; do
       helpme 
       ;;
     \?) 
-      fatal "Invalid option: -$OPTARG." 
+      fatal "Invalid option: -$OPTARG."
       ;;
     :) 
-      fatal "Option -$OPTARG requires an argument." 
+      fatal "Option -$OPTARG requires an argument."
       ;;
 
   esac
@@ -375,14 +375,14 @@ else
       if [[ "${structure_file##*.}" == "coord" ]] ; then
         # Assume that a file ending on coord is in the right format already, just try to copy
         if copied_structure_file="$( cp -v -- "$structure_file" "$crest_dir/coord" 2>&1 )" ; then
-	  message "$copied_structure_file"
+          message "$copied_structure_file"
           break
         else
-	  debug "$copied_structure_file"
-	  fatal "Copying the structure data file failed."
+          debug "$copied_structure_file"
+          fatal "Copying the structure data file failed."
         fi
       else
-	# Use thes first file to consider
+        # Use thes first file to consider
         if [[ "$use_openbabel" == "yes" ]] ; then
           convert_xyz_to_coord "$structure_file" "$crest_dir/coord"
         else
@@ -405,5 +405,5 @@ fi
 debug "Content of created directory: $( ls -lah "$crest_dir" )"
 message "All Done: ${0##*/} (part of runxtb.bash $version, $versiondate)"
 
-#hlp 
+#hlp
 #hlp This script is part of runxtb.bash ($version, $versiondate).

@@ -2,7 +2,7 @@
 
 ###
 #
-# runxtb.sh -- 
+# runxtb.sh --
 #   a wrapper script to apply an environment for xtb
 # Copyright (C) 2019 - 2023  Martin C Schwarzer
 #
@@ -27,18 +27,18 @@
 #hlp   https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb
 #hlp   without making changes to any local setting files like
 #hlp   '.bashrc', '.profile', etc.
-#hlp  
+#hlp
 #hlp LICENSE:
 #hlp   runxtb.sh  Copyright (C) 2019 - 2023  Martin C Schwarzer
-#hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software, 
-#hlp   and you are welcome to redistribute it under certain conditions; 
+#hlp   This program comes with ABSOLUTELY NO WARRANTY; this is free software,
+#hlp   and you are welcome to redistribute it under certain conditions;
 #hlp   please see the license file distributed alongside this repository,
 #hlp   which is available when you type '${0##*/} license',
 #hlp   or at <https://github.com/polyluxus/runxtb.bash>.
 #hlp
 #hlp USAGE:
 #hlp   ${0##*/} [script options] -- <coord_file> [xtb options]
-#hlp 
+#hlp
 
 #
 # Print logging information and warnings nicely.
@@ -67,7 +67,7 @@ warning ()
 fatal ()
 {
   exit_status=1
-  if (( stay_quiet <= 2 )) ; then 
+  if (( stay_quiet <= 2 )) ; then
     echo "ERROR  : $*" >&2
   else
     debug "(error  ) $*"
@@ -82,7 +82,7 @@ debug ()
   while read -r line || [[ -n "$line" ]] ; do
     echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
   done <<< "$*"
-}    
+}
 
 #
 # Print some helping commands
@@ -160,11 +160,11 @@ get_bindir ()
 {
   # Resolves the absolute location of parameter and returns it
   # partially taken from https://stackoverflow.com/a/246128/3180795
-  local resolve_file="$1" description="$2" 
+  local resolve_file="$1" description="$2"
   local link_target directory_name resolve_dir_name
   debug "Getting directory for '$resolve_file'."
   resolve_file=$( expand_tilde_path "$resolve_file" )
-  
+
   # Check if anything exists in this location, otherwise abort.
   if [[ ! -e "$resolve_file" ]] ; then
     fatal "It appears, that '$resolve_file' does not exist."
@@ -173,20 +173,20 @@ get_bindir ()
   fi
 
   # resolve $resolve_file until it is no longer a symlink
-  while [[ -h "$resolve_file" ]] ; do 
+  while [[ -h "$resolve_file" ]] ; do
     link_target="$( readlink "$resolve_file" )"
     if [[ $link_target == /* ]]; then
       debug "File '$resolve_file' is an absolute symlink to '$link_target'"
       resolve_file="$link_target"
     else
-      directory_name="$( dirname "$resolve_file" )" 
+      directory_name="$( dirname "$resolve_file" )"
       debug "File '$resolve_file' is a relative symlink to '$link_target' (relative to '$directory_name')"
       #  If $resolve_file was a relative symlink, we need to resolve 
       #+ it relative to the path where the symlink file was located
       resolve_file="$directory_name/$link_target"
     fi
   done
-  debug "File is '$resolve_file'" 
+  debug "File is '$resolve_file'"
   resolve_dir_name="$( dirname "$resolve_file")"
   directory_name="$( cd -P "$( dirname "$resolve_file" )" && pwd )"
   if [[ "$directory_name" != "$resolve_dir_name" ]] ; then
@@ -216,7 +216,7 @@ cleanup_and_quit ()
 
   # Close the messaging channel
   exec 3>&-
-  
+
   # Leave orderly
   exit "$exit_status"
 }
@@ -238,7 +238,7 @@ validate_integer ()
   fi
 }
 
-# 
+#
 # Test whether a given walltime is in the correct format
 #
 # Imported from https://github.com/polyluxus/tools-for-g16.bash
@@ -353,7 +353,7 @@ format_duration ()
                           "$final_duration_seconds"
 }
 
-# 
+#
 # Load the modules
 #
 
@@ -383,7 +383,7 @@ load_xtb_modules ()
   done
 }
 
-# 
+#
 # Test and add to PATH
 #
 
@@ -397,7 +397,7 @@ check_program ()
       warning "The script might not have been set up properly."
       return 1
     fi
-}    
+}
 
 add_to_PATH ()
 {
@@ -487,10 +487,10 @@ get_rc ()
     test_runxtbrc_dir="$1"
     shift
     if test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/.runxtbrc" )" ; then
-      return_runxtbrc_loc="$test_runxtbrc_loc" 
+      return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
       continue
-    elif test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/runxtb.rc" )" ; then 
+    elif test_runxtbrc_loc="$( test_rc_file "$test_runxtbrc_dir/runxtb.rc" )" ; then
       return_runxtbrc_loc="$test_runxtbrc_loc"
       debug "   (found) return_runxtbrc_loc=$return_runxtbrc_loc"
       continue
@@ -526,7 +526,7 @@ write_submit_script ()
 {
     message "Remote mode selected, creating job script instead."
     # Possible values for queue are pbs-gen bsub-gen bsub-rwth slurm-gen slurm-rwth
-    local queue="$1" queue_short 
+    local queue="$1" queue_short
     local output_file_local="$2" submitscript_filename
     [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
     queue_short="${queue%-*}"
@@ -641,7 +641,7 @@ write_submit_script ()
     else
       # Use path settings
       # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
-    	cat >&9 <<-EOF
+        cat >&9 <<-EOF
 			export XTBHOME="$XTBHOME"
 			export XTBPATH="$XTBPATH"
 			export PATH="$XTBHOME/bin:\$PATH"
@@ -653,7 +653,7 @@ write_submit_script ()
     cat >&9 <<-EOF
 		# Test the command
 		command -v "$xtb_callname" || exit 1
-		export OMP_STACKSIZE="${requested_memory}m"  
+		export OMP_STACKSIZE="${requested_memory}m"
 		export OMP_NUM_THREADS="$requested_numCPU"
 		export OMP_MAX_ACTIVE_LEVELS=1
 		export MKL_NUM_THREADS="$requested_numCPU"
@@ -661,7 +661,7 @@ write_submit_script ()
 
 		exit_status=0
 		date
-		${submit_commandline[@]} > "$output_file" || exit_status=1 
+		${submit_commandline[@]} > "$output_file" || exit_status=1
 		date
 		[[ -e molden.input ]] && mv -v -- molden.input "${output_file%.*}.molden"
 		exit \$exit_status
@@ -768,7 +768,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   for the same options, only the last one will have an effect.
     #hlp 
     #hlp   -p <ARG> Set number of professors
-    p) 
+    p)
       validate_integer "$OPTARG"
       requested_numCPU="$OPTARG"
       ;;
@@ -793,17 +793,17 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            For the values '', '0', 'auto' the script will guess,
     #hlp            and either derive it from the coordinate file given, or from the program name.
     #hlp            Use 'stdout', '-' to send output to standard out.
-    o) 
+    o)
       output_file="$OPTARG"
       ;;
     #hlp   -s       Write submitscript (instead of interactive execution)
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    s) 
+    s)
       run_interactive="no"
       ;;
     #hlp   -S       Write submitscript and submit it to the queue.
     #hlp            Requires '-Q' to be set. (Default: pbs-gen)
-    S) 
+    S)
       run_interactive="sub"
       ;;
     #hlp   -Q <ARG> Select queueing system (Default: pbs-gen)
@@ -815,7 +815,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       ;;
     #hlp   -P <ARG> Account to project (bsub) / account (slurm) <ARG>.
     #hlp            The switch '-Q' has to be set appropriately.
-    P) 
+    P)
       qsys_project="$OPTARG"
       ;;
     #hlp   -M       Use modules instead of paths (work in progress).
@@ -838,13 +838,13 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       fi
       ;;
     #hlp   -i       Execute in interactive mode (overwrite rc settings)
-    i) 
+    i)
       run_interactive="yes"
       ;;
     #hlp   -B <ARG> Set absolute path to the xtb executable to <ARG>.
     #hlp            This will also set the callname and ignore an empty commandline.
     #hlp            Assumed format for <ARG>: ./relative/or/absolute/path/to/XTBHOME/bin/'callname'
-    B) 
+    B)
       if xtb_install_root="$( get_bindir "${OPTARG%/bin/*}" "XTB root directory" )" ; then
         xtb_callname="${OPTARG##*/}"
         debug "Using installation in '$xtb_install_root' with name '$xtb_callname'."
@@ -855,31 +855,31 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   -C <ARG> Change the callname of the script.
     #hlp            This can be useful to request a different executable from the package.
     #hlp            No warning will be issued if the command line is empty.
-    C) 
+    C)
       xtb_callname="$OPTARG"
       ignore_empty_commandline="true"
       ;;
     #hlp   -q       Stay quiet! (Only this startup script)
     #hlp            May be specified multiple times to be more forceful.
-    q) 
+    q)
       (( stay_quiet++ )) 
       ;;
     #hlp   -h       Prints this help text
-    h) 
+    h)
       helpme 
       ;;
     #hlp   -H       Displays the man page of xtb of the installation.
-    H) 
+    H)
       display_howto "xtb"
       ;;
     #hlp   -X       Displays the man page of xcontrol of the installation.
-    X) 
+    X)
       display_howto "xcontrol"
       ;;
-    \?) 
+    \?)
       fatal "Invalid option: -$OPTARG." 
       ;;
-    :) 
+    :)
       fatal "Option -$OPTARG requires an argument." 
       ;;
 
@@ -996,9 +996,9 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
     message "Created $request_qsys submit script '$submitscript'."
   fi
 elif [[ $run_interactive =~ [Yy][Ee][Ss] ]] ; then
-  if [[ $output_file  =~ ^[[:space:]]*(-|[Ss][Tt][Dd][Oo][Uu][Tt])[[:space:]]*$ ]] ; then 
+  if [[ $output_file  =~ ^[[:space:]]*(-|[Ss][Tt][Dd][Oo][Uu][Tt])[[:space:]]*$ ]] ; then
     debug "Writing to stdout, Caught ${BASH_REMATCH[1]} in '$output_file'."
-    "$xtb_callname" "${xtb_commands[@]}" 
+    "$xtb_callname" "${xtb_commands[@]}"
     exit_status="$?" # Carry over exit status
   else
     message "Will write xtb output to '$output_file'."
