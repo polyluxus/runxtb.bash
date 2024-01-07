@@ -13,7 +13,6 @@
 #  (Without including the bin directory/ executable name; avoid trailing slashes.)
 #
 #  xtb_install_root="/path/to/xtb/root"
-#  xtb_install_root="~polyluxus/chemsoft/xtb/xtb_6.2.3"
    xtb_install_root=""
 #
 ## Set the name of the executable.
@@ -31,7 +30,7 @@
    stay_quiet=0
 
 ## Trap output of xtb in a file.
-## Uncomment the line below to always use the same filename, 
+## Uncomment the line below to always use the same filename,
 ## which can be overwritten with the -o switch.
 #
 #  output_file="runxtb.out"
@@ -45,6 +44,18 @@
 ## This can be overwritten with an explicit empty argument to -o:
 ##   runxtb -o '' [other opts] <coord> [xtb options]
 
+## Use openbabel to convert xyz to coord in crest.prepare.
+## This has currently no effect on runxtb.
+#
+#  use_openbabel="yes"
+   use_openbabel="no"
+#
+## This can be turned on with crest.prepare -c from the command line.
+#
+## Set a default name (this must be set in the settings file)
+#
+   obabel_cmd="obabel"
+
 ## Set default mode, where interactive means that it is calculated immediately.
 ## (yes: interactive; no: write script; sub: write and submit)
 #
@@ -57,7 +68,7 @@
 #
    request_qsys="slurm-gen"
 
-## If project options are enabled (e.g. for bsub-rwth), 
+## If project options are enabled (e.g. for bsub-rwth),
 ## set to which it should be accounted.
 ## This can be overwritten with -P0 or -P default.
 #
@@ -79,4 +90,4 @@
    requested_walltime="24:00:00"
 
 #
-## End of example runxtb.rc (Martin; 2020-04-09; wrapper version 0.4.0)
+## End of example runxtb.rc (Martin; 2024-01-07; wrapper version 0.5.0)

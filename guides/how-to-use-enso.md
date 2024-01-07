@@ -1,11 +1,12 @@
 # Note
 
 The content of this guide has not been updated since 2019-09-10. Since then a lot has happened. 
-For example, xtb went open source and is now available on 
+For example, xtb went open source and is now available on
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest).
+You can find crest on [GitHub](https://github.com/crest-lab/crest/releases/latest), too.
 This is also true for enso, which can also be obtained from
 [GitHub](https://github.com/grimme-lab/enso/releases/latest).
-Furthermore, I am not maintaining any installation on the RWTH cluster, hence I cannot recommend 
+Furthermore, I am not maintaining any installation on the RWTH cluster, hence I cannot recommend
 the setup for the outdated bundle given below. This guide would have to be adjusted for any of these changes.
 
 A more general guide on how to set-up xtb and crest for the use with runxtb can be found 
@@ -14,7 +15,7 @@ This guide is maintained only as a starting point for computations using enso, a
 in the [xtb manual](https://xtb-docs.readthedocs.io/en/latest/enso_doc/enso_setup.html) are by far
 better resources.
 
-(Martin; 2020-04-09; wrapper version 0.4.0)
+(Martin; 2024-01-07; wrapper version 0.5.0)
 
 # How to use enso (and crest, and xtb)
 

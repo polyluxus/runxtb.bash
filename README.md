@@ -1,15 +1,15 @@
 # runxtb.bash
 
-This script provides a wrapper for the 
+This script provides a wrapper for the
 extended tight-binding semi-empirical program package
-[xtb](https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb) 
+[xtb](https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb)
 (version 6.0 or later) from Stefan Grimme's group at the University of Bonn
 (contact: xtb{at}thch.uni-bonn.de).
 It is available via [GitHub](https://github.com/grimme-lab/xtb).
 
-The runxtb script makes it unnecessary to set environment variables like 
+The runxtb script makes it unnecessary to set environment variables like
 `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OMP_STACKSIZE`, and `XTBPATH` globally,
-for example via the `.bashrc`. 
+for example via the `.bashrc`.
 It also provides a mechanism to automatically trap the output
 that would normally go to standard out (i.e. the terminal).
 Additionally it can be used to create scripts to submit it to a queueing system.
@@ -19,34 +19,36 @@ Additionally it can be used to create scripts to submit it to a queueing system.
 A more elaborate guide on how to set up runxtb and xtb can be found in the
 guides directory: [guides/set-up.md](guides/set-up.md).
 
-Briefly: 
+Briefly:
 
-Obtain the latest version of xtb (and crest) from its 
+Obtain the latest version of xtb (and crest) from its
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest) page.
-Pick a directory, where you would like to install these packages, e.g. 
+While you're at it, you might want to pick up crest, too. It is also available at
+[GithUb](https://github.com/crest-lab/crest/releases/latest).
+Pick a directory, where you would like to install these packages, e.g.
 a separate user (here: software) and the root directory `/home/software/chemsoft/xtb`.
 Unpack the downloaded xtb archives (this may create a new directory for the downloaded version,
 which should be set as `xtb_install_root` for runxtb).
 Copy crest to the `bin` directory within there.
 
-Get the latest release of this repository from 
+Get the latest release of this repository from
 [GitHub](https://github.com/polyluxus/runxtb.bash/releases/latest).
 You may want to install it alongside the original binary, e.g. `/home/software/chemsoft/xtb`.
 Unpack the contents, and if necessary rename the directory.
 Alternatively you can of course also clone this repository.
 
-Change to the runxtb directory. If you have a previous version of the script, it might be possible 
-to import your settings. This is dependent on where your installed them. 
-Now you can simply run the configure script, which will prompt for the values 
+Change to the runxtb directory. If you have a previous version of the script, it might be possible
+to import your settings. This is dependent on where your installed them.
+Now you can simply run the configure script, which will prompt for the values
 with a short description. If you are using a fresh installation, it will recover the
 default settings from the supplied `runxtb.rc`.
 At the end, you will be prompted for a location for the configuration file.
-Keep in mind that the wrapper script will first look for a file `.runxtbrc`, 
+Keep in mind that the wrapper script will first look for a file `.runxtbrc`,
 then for a file `runxtb.rc`, in directories of the following order:
 `scriptpath`, `/home/$USER`, `/home/$USER/.config`, and `$PWD`.
 If a `.runxtbrc` is found, it will skip `runxtb.rc`.
-The location the script has predefined is `$PWD/runxtb.rc`, hence overwriting the 
-provided example file, if it is launched from the installation directory of runxtb. 
+The location the script has predefined is `$PWD/runxtb.rc`, hence overwriting the
+provided example file, if it is launched from the installation directory of runxtb.
 Alternative options (e.g. `'scriptpath'/.runxtbrc`) are also given.
 After that, the configuration script will ask about creating symbolic links in `~/bin`.
 If you choose to do that, you can basically access the script from anywhere in your file system.
@@ -54,7 +56,7 @@ If you choose to do that, you can basically access the script from anywhere in y
 ## Updating
 
 If you decided to clone the repository, make sure to stash your changes,
-then pull the most recent version. 
+then pull the most recent version.
 If you have stashed any changes, you may want to apply them now.
 After running the configuration script, everything should be working with the new version.
 
@@ -87,7 +89,7 @@ The following script options are available:
 | `-p <ARG>`  | Specify the number of processors to be used. (Default: `4`)
 | `-m <ARG>`  | Specify the memory to be used (in megabyte). (Default: `1000`)
 | `-w <ARG>`  | Specify the wall time to be used (`[[HH]:[MM]:]SS`). (Default: `24:00:00`)
-| `-o <ARG>`  | Trap the output (without errors) of `xtb` into a file called `<ARG>`. (Default: `auto`) 
+| `-o <ARG>`  | Trap the output (without errors) of `xtb` into a file called `<ARG>`. (Default: `auto`)
 | `-s`        | Write a submit script instead of interactive execution (default: PBS). Resulting file needs to be submitted.
 | `-S`        | Write submit script and directly submit it to the queue, requires setting a queueing system with `-Q`.
 | `-Q <ARG>`  | Set a queueing system for which the submit script should be prepared, supported `pbs-gen`, `slurm-gen`, `bsub-gen`.
@@ -110,7 +112,7 @@ The following files and/or directories come with this script:
  * `runxtb.rc` An example set-up file.
  * `xtb.dummy` A tiny bash script only for testing. 
    This will only echo `<coord_file> [options]` verbatim.
- * `crest.prepare.sh` A small script that creates a new directory 
+ * `crest.prepare.sh` A small script that creates a new directory
    with a suitable `coord` file to start a `crest` run.
  * `README.md` This file.
  * `configure` A directory containing a script to configure the wrapper.
@@ -131,11 +133,11 @@ The dummy script `xtb.dummy` always exits with `2`.
 ## Debug
 
 Things go wrong.  
-We need to accept that. 
+We need to accept that.  
 To find out more, using `debug` as the very first argument gives more information.
 For example:
 ```
-runxtb.sh debug -p1 -qq -s  dummy.xyz --opt 
+runxtb.sh debug -p1 -qq -s  dummy.xyz --opt
 ```
 If you find anything not going as expected,
 please include the debug output when submitting a bug report to the
@@ -144,7 +146,7 @@ please include the debug output when submitting a bug report to the
 ## License (GNU General Public License v3.0)
 
 runxtb.bash - a wrapper script for xtb
-Copyright (C) 2019 - 2020 Martin C Schwarzer
+Copyright (C) 2019 - 2024 Martin C Schwarzer
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -161,4 +163,4 @@ See [LICENSE](LICENSE) to see the full text.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-(Martin; 2020-04-09; wrapper version 0.4.0)
+(Martin; 2024-01-07; wrapper version 0.5.0)
