@@ -53,6 +53,17 @@ Alternative options (e.g. `'scriptpath'/.runxtbrc`) are also given.
 After that, the configuration script will ask about creating symbolic links in `~/bin`.
 If you choose to do that, you can basically access the script from anywhere in your file system.
 
+### Pointer for modules on Claix18 as of 15.11.2023
+You need the following modules in the `.runxtbrc` file:
+```
+load_modules[0]="foss/2022a"
+load_modules[1]="xtb/6.5.1"
+load_modules[2]="CREST/2.12"
+```
+The script will determine if you are on an RWTH cluster and unload the `intel` toolchain
+automatically, as you are otherwise not able to load the `OpenMPI` module which is part of the
+    `foss/2022a` toolchain. More information can be found [here.](https://help.itc.rwth-aachen.de/service/rhr4fjjutttf/article/450d33cc19fd4e50b1dd07027e9b55bd/#user-content-toolchains)
+
 ## Updating
 
 If you decided to clone the repository, make sure to stash your changes,

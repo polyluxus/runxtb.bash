@@ -365,22 +365,29 @@ load_xtb_modules ()
   ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
   # Try to load the modules, but trap the output in the temporary file.
   # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
-  module load "${load_modules[*]}" &>> "$tmpfile" || fatal "Failed to load modules."
+  # The new Lmod module system throws errors when loading all modules sequentially in one
+  # command, thus they are now loaded sequentially.
+  # Also checks if on RWTH cluster as the intel toolchain as to be unloaded before the foss
+  # toolchain can be loaded without throwing errors.
+  if [[ $(uname -n) == *"rwth"* ]]; then
+    module unload intel &>> "$tmpfile"
+  fi
+
+  for mod in "${load_modules[@]}" ; do
+    module load "${mod}" &>> "$tmpfile" || fatal "Failed to load module."
+  done
   # Remove colourcodes with sed:
   # https://www.commandlinefu.com/commands/view/12043/remove-color-special-escape-ansi-codes-from-text-with-sed
   sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
   # Check whether then modules were loaded ok
   local check_module
-  for check_module in "${load_modules[@]}" ; do
-    # Cut after a slash is encountered (probably works universally), there is a check for the command anyway
-    if grep -q -E "${check_module%%/*}.*[Oo][Kk]" "$tmpfile" ; then
-      debug "Module '${check_module}' loaded successfully."
-    else
-      debug "Issues loading module '${check_module}'."
-      debug "$(cat "$tmpfile")"
-      return 1
-    fi
-  done
+  if grep -q -E "[Ee][Rr][Rr][Oo][Rr]" "$tmpfile" ; then
+    debug "Issues loading modules."
+    debug "$(cat "$tmpfile")"
+    return 1
+  else
+    debug "Modules loaded successfully."
+  fi
 }
 
 #
@@ -633,11 +640,19 @@ write_submit_script ()
 			# Loading the modules should take care of everything except threads
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
-			module load ${load_modules[*]} 2>&1 || exit 1
+			EOF
+      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
+        echo "module unload intel" >&9
+      fi
+      for mod in "${load_modules[@]}" ; do
+        cat >&9 <<-EOF
+				module load "${mod}"
+				EOF
+      done
+
 			# Redirect because otherwise it would go to the error output, which might be bad
 			# Exit on error, which it might not do given a specific implementation
 			 
-			EOF
     else
       # Use path settings
       # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
