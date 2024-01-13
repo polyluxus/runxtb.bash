@@ -80,10 +80,15 @@
 #  use_modules="true"
    use_modules="false"
 #
+#  Allow to start fresh by allowing modules to be purged:
+#
+#  purge_modules="true"
+#  purge_modules="false"
+#
 #  They need to be named, too. For example (on CLAIX18):
 #
-#  load_modules[0]="CHEMISTRY"
-#  load_modules[1]="xtb"
+#  load_modules[0]="xtb"
+#  load_modules[1]="CREST"
 
 ## Set Walltime for non-interactive mode
 #

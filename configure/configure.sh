@@ -482,6 +482,9 @@ ask_modules ()
       # use_module_system="false"
       # warning "Switching the use of modules off."
     fi
+    ask "Would you like to purge pre-loaded modules?"
+    use_purge_modules=$(read_true_false)
+    debug "use_purge_modules=$use_purge_modules"
     # Unsetting read in module
     unset use_module_items
     local module_index=0
@@ -773,15 +776,24 @@ print_settings ()
   echo     "#"
   if [[ -z $use_module_system ]] ; then
     echo   "#  use_modules=\"true\""
+    echo   "#"
+    echo   "#  Allow to start fresh by allowing modules to be purged:"
+    echo   "#"
+    echo   "#  purge_modules=\"true\""
+    echo   "#  purge_modules=\"false\""
   else
     echo   "   use_modules=\"$use_module_system\""
+    echo   "#"
+    echo   "#  Allow to start fresh by allowing modules to be purged:"
+    echo   "#"
+    echo   "#  purge_modules=\"$use_purge_modules\""
   fi
   echo     "#"
   if (( ${#use_module_items[@]} == 0 )) ; then
     echo   "#  They need to be named, too. For example:"
     echo   "#"
-    echo   "#  load_modules[0]=\"CHEMISTRY\""
-    echo   "#  load_modules[1]=\"xtb\""
+    echo   "#  load_modules[0]=\"xtb\""
+    echo   "#  load_modules[1]=\"CREST\""
   else
     echo   "#  Specified modules to be loaded:"
     echo   "#"

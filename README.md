@@ -106,7 +106,7 @@ The following script options are available:
 | `-Q <ARG>`  | Set a queueing system for which the submit script should be prepared, supported `pbs-gen`, `slurm-gen`, `bsub-gen`.
 | `-P <ARG>`  | Account to project or account `<ARG>`, only slurm, LSF (bsub).
 | `-M`        | Use pre-installed modules instead of path settings, also needs specified module(s). 
-| `-l <ARG>`  | Specify a module to be used, will also invoke `-M`, may be specified multiple times to create a list, `<ARG>=0` clears the list.
+| `-l <ARG>`  | Specify a module to be used, will also invoke `-M`, may be specified multiple times to create a list, `<ARG>=purge` unloads all modules and `<ARG>=0` clears the list.
 | `-i`        | Execute in interactive mode (default without configuration).
 | `-B <ARG>`  | Set the absolute path to the executable `xtb` to `<ARG>`. The name of the program needs to be included.
 | `-C <ARG>`  | Set the name of the program directly, e.g. to access a different executable like crest (if installed).

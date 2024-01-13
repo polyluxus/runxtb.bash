@@ -119,7 +119,7 @@ helpme ()
 display_howto ()
 {
   local show_howto="${1:-xtb}"
-  if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+  if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
     debug "Using modules."
     # Loading the modules should take care of everything except threads
     load_xtb_modules || fatal "Failed loading modules."
@@ -219,11 +219,6 @@ get_bindir ()
 
 cleanup_and_quit ()
 {
-  # Clean temporary files
-  if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
-    debug "$(rm -vf "$tmpfile")"
-  fi
-
   # Say a nice 'Bye bye!'
   message "Runxtb ($version, $versiondate) wrapper script completed."
 
@@ -375,32 +370,20 @@ load_xtb_modules ()
   # Fail if there are no modules given (don't make any assumptions).
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
   # Fail if the module command is not available. 
-  ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
-  # Try to load the modules, but trap the output in the temporary file.
-  # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
-  # The new Lmod module system throws errors when loading all modules sequentially in one
-  # command, thus they are now loaded sequentially.
-  # Also checks if on RWTH cluster as the intel toolchain as to be unloaded before the foss
-  # toolchain can be loaded without throwing errors.
-  if [[ $(uname -n) == *"rwth"* ]]; then
-    module unload intel &>> "$tmpfile"
+  ( command -v module 2>&1 ) || fatal "Command 'module' not available."
+  # Since commited to only supporting proper module systems, failing to load
+  # a module will produce an exit status > 0. This will be trapped and the script 
+  # will exit. (On the rwth cluster it is 'Lmod' - good choice.)
+  # To be on the safe side, there should be the option to purge modules.
+  if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
+    modules purge &> >(debug_trace) || fatal "Failed to purge modules."
   fi
-
+  # Load the modules sequentially:
+  local mod
   for mod in "${load_modules[@]}" ; do
-    module load "${mod}" &>> "$tmpfile" || fatal "Failed to load module."
+    module load "${mod}" &> >(debug_trace) || fatal "Failed to load module '${mod}'."
   done
-  # Remove colourcodes with sed:
-  # https://www.commandlinefu.com/commands/view/12043/remove-color-special-escape-ansi-codes-from-text-with-sed
-  sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
-  # Check whether then modules were loaded ok
-  local check_module
-  if grep -q -E "[Ee][Rr][Rr][Oo][Rr]" "$tmpfile" ; then
-    debug "Issues loading modules."
-    debug "$(cat "$tmpfile")"
-    return 1
-  else
-    debug "Modules loaded successfully."
-  fi
+  debug "Modules loaded successfully."
 }
 
 #
@@ -566,7 +549,7 @@ write_submit_script ()
     # Calculate the correct use of memory, add some overhead
     local corrected_memory
     corrected_memory=$(( requested_numCPU * requested_memory + 100 ))
-    
+
     # Header is different for the queueing systems
     if [[ "$queue" =~ [Pp][Bb][Ss] ]] ; then
       cat >&9 <<-EOF
@@ -647,20 +630,23 @@ write_submit_script ()
 		EOF
 
     # Use modules or path
-    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+    if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
 			EOF
+			# Next isn't really necessary, purging should do the trick.
       if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
-        echo "module unload intel" >&9
+        echo "module unload intel 2>&1" >&9
       fi
+      if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
+        echo "modules purge 2>&1" >&9
+      fi
+      local mod
       for mod in "${load_modules[@]}" ; do
-        cat >&9 <<-EOF
-				module load "${mod}"
-				EOF
+        echo "module load '${mod}' 2>&1" >&9
       done
 
 			# Redirect because otherwise it would go to the error output, which might be bad
@@ -723,13 +709,6 @@ operatingsystem=$(uname -o)
 architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
-# Find temporary directory for internal logs (or use null)
-if ! tmpfile="$( mktemp --tmpdir runxtb.err.XXXXXX 2> /dev/null )" ; then
-  warning "Failed creating temporary file for error logging."
-  tmpfile="/dev/null"
-fi
-debug "Writing errors to temporary file '$tmpfile'."
-
 # Clean up in case of emergency
 trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
@@ -746,9 +725,10 @@ request_qsys="pbs-gen"
 qsys_project="default"
 exit_status=0
 use_modules="false"
+purge_modules="true"
 declare -a load_modules
-#load_modules[0]="CHEMISTRY"
-#load_modules[1]="xtb"
+#load_modules[0]="xtb"
+#load_modules[1]="crest"
 stay_quiet=0
 ignore_empty_commandline=false
 
@@ -855,10 +835,16 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            May be specified multiple times to create a list.
     #hlp            The modules need to be specified in the order they have to be loaded.
     #hlp            If <ARG> is '0', then reset the list.
+    #hlp            If <ARG> is 'purge', all (by default) loaded modules will be unloaded,
+    #hlp            then the list will be reset.
+    #hlp            Please note that an empty list will cause the script to fail.
     #hlp            (Can also be set in the rc.)
     l)
       use_modules="true"
-      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
+      if [[ "$OPTARG" =~ ^[[:space:]]*[Pp][Uu][Rr][Gg][Ee][[:space:]]*$ ]] ; then
+	purge_modules="true"
+	unset load_modules
+      elif [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
         unset load_modules
         [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
       else
