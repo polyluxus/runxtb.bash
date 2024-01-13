@@ -77,11 +77,24 @@ fatal ()
 
 debug ()
 {
-  # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
+  # Include the fuction that called the debug statement (skip the first, that is the debug function itself)
   local line
   while read -r line || [[ -n "$line" ]] ; do
-    echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
+    echo "DEBUG  : (${FUNCNAME[*]:1}) $line" >&4
   done <<< "$*"
+}
+
+debug_trace ()
+{
+  # This function will read from stdout and pass it to the debug function.
+  # The intended funktionality is within this construct:
+  #   command_that_fails_and_writes_stdout > >(debug_trace) || fatal "fail"
+  # The script error message comes first, but the command output comes next.
+  # It's a helper function for the modules feature.
+  local line
+  while read -r line || [[ -n "$line" ]] ; do
+    debug "$line"
+  done
 }
 
 #
