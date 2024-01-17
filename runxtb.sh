@@ -370,13 +370,13 @@ load_xtb_modules ()
   # Fail if there are no modules given (don't make any assumptions).
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
   # Fail if the module command is not available. 
-  ( command -v module 2>&1 ) || fatal "Command 'module' not available."
+  ( command -v module &> /dev/null ) || fatal "Command 'module' not available."
   # Since commited to only supporting proper module systems, failing to load
   # a module will produce an exit status > 0. This will be trapped and the script 
   # will exit. (On the rwth cluster it is 'Lmod' - good choice.)
   # To be on the safe side, there should be the option to purge modules.
   if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
-    modules purge &> >(debug_trace) || fatal "Failed to purge modules."
+    module purge &> >(debug_trace) || fatal "Failed to purge modules."
   fi
   # Load the modules sequentially:
   local mod
