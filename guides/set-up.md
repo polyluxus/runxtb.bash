@@ -23,7 +23,7 @@ tar xf /path/to/xtb-*.tar.xz
 ```
 This will create a new sub-directory. In the above mentioned case this will be:
 ```
-/home/software/chemsoft/xtb/xtb_6.6.1
+/home/martin/local/xtb/xtb_6.6.1
 ```
 For the installation of `runxtb` this will also be `xtb_install_root`.
 There are plenty of other ways to do this, but if you are wondering about these,
@@ -34,7 +34,7 @@ I found that bundling the crest executable into the repository works best.
 Therefore, change to the `bin` directory of the newly created directory;
 for the example this would be:
 ```
-/home/software/chemsoft/xtb/xtb_6.6.1/bin
+/home/martin/local/xtb/xtb_6.6.1/bin
 ```
 Simply unpack the crest archive here, as in the past it usually only contained the crest executable:
 ```
