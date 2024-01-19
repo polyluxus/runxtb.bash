@@ -1,3 +1,3 @@
 #!/bin/bash
-version="0.6.0-devel"
-versiondate="2024-01-XX"
+version="0.6.0.ea1"
+versiondate="2024-01-19"
