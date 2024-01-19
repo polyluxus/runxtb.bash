@@ -98,10 +98,12 @@ This option also needs a specified module or a list of modules (see below).
 
 Command line: `-l <ARG>` 
 Configuration: `load_modules[<N>]=<ARG>`, with `<N>` being the integer load order
+Configuration: `purge_modules=true|false`
 
 Specify a module to be used. This will also invoke `-M`.
 The option may be specified multiple times to create a list (stored as an array).
 If `<ARG>` is `0`, the list will be cleared first.
+If `<ARG>` is `purge`, all modules will be purged (unloaded) first, then the list will be cleared.
 The modules (if more than one) need to be specified in the order they have to be loaded if they depend on each other.
 
 Command line: `-B <ARG>`  
@@ -137,4 +139,4 @@ Command line: `-X`
 
 Retrieve the man page of xcontrol from the original xtb distribution.
 
-(Martin; 2024-01-07; wrapper version 0.5.0)
+(Martin; 2024-01-19; wrapper version 0.6.0.ea1)

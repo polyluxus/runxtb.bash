@@ -24,7 +24,7 @@ Briefly:
 Obtain the latest version of xtb (and crest) from its
 [GitHub](https://github.com/grimme-lab/xtb/releases/latest) page.
 While you're at it, you might want to pick up crest, too. It is also available at
-[GithUb](https://github.com/crest-lab/crest/releases/latest).
+[GitHub](https://github.com/crest-lab/crest/releases/latest).
 Pick a directory, where you would like to install these packages, e.g.
 a separate user (here: software) and the root directory `/home/software/chemsoft/xtb`.
 Unpack the downloaded xtb archives (this may create a new directory for the downloaded version,
@@ -52,6 +52,16 @@ provided example file, if it is launched from the installation directory of runx
 Alternative options (e.g. `'scriptpath'/.runxtbrc`) are also given.
 After that, the configuration script will ask about creating symbolic links in `~/bin`.
 If you choose to do that, you can basically access the script from anywhere in your file system.
+
+### Using environment modules
+
+This script can interface to environment modules.
+For the developement of this feature, [Lmod](https://lmod.readthedocs.io/) was used.
+
+More details can be found in the guides directory: [guides/module-examples.md](guides/module-examples.md).
+
+To check whether your supplied module system is supported, please find the script
+`test_modules.sh` in the [configure directory](configure) of this repository.
 
 ## Updating
 
@@ -95,7 +105,7 @@ The following script options are available:
 | `-Q <ARG>`  | Set a queueing system for which the submit script should be prepared, supported `pbs-gen`, `slurm-gen`, `bsub-gen`.
 | `-P <ARG>`  | Account to project or account `<ARG>`, only slurm, LSF (bsub).
 | `-M`        | Use pre-installed modules instead of path settings, also needs specified module(s). 
-| `-l <ARG>`  | Specify a module to be used, will also invoke `-M`, may be specified multiple times to create a list, `<ARG>=0` clears the list.
+| `-l <ARG>`  | Specify a module to be used, will also invoke `-M`, may be specified multiple times to create a list, `<ARG>=purge` unloads all modules and `<ARG>=0` clears the list.
 | `-i`        | Execute in interactive mode (default without configuration).
 | `-B <ARG>`  | Set the absolute path to the executable `xtb` to `<ARG>`. The name of the program needs to be included.
 | `-C <ARG>`  | Set the name of the program directly, e.g. to access a different executable like crest (if installed).
@@ -163,4 +173,4 @@ See [LICENSE](LICENSE) to see the full text.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-(Martin; 2024-01-07; wrapper version 0.5.0)
+(Martin; 2024-01-19; wrapper version 0.5.0.ea1)
