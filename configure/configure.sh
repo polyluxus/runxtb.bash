@@ -786,7 +786,7 @@ print_settings ()
     echo   "#"
     echo   "#  Allow to start fresh by allowing modules to be purged:"
     echo   "#"
-    echo   "#  purge_modules=\"$use_purge_modules\""
+    echo   "   purge_modules=\"$use_purge_modules\""
   fi
   echo     "#"
   if (( ${#use_module_items[@]} == 0 )) ; then
