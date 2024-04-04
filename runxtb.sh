@@ -637,10 +637,6 @@ write_submit_script ()
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
 			EOF
-			# Next isn't really necessary, purging should do the trick.
-      if [[ "$queue" =~ [Rr][Ww][Tt][Hh] ]] ; then
-        echo "module unload intel 2>&1" >&9
-      fi
       if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
         echo "modules purge 2>&1" >&9
       fi
