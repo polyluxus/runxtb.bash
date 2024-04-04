@@ -897,6 +897,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   xtb_install_root="$xtb_install_root" (will set XTBPATH)
     #hlp   xtb_callname="$xtb_callname"
     #hlp   use_modules="$use_modules" 
+    #hlp   purge_modules="$purge_modules"
     #hlp   load_modules=("${load_modules[*]}")
     #hlp   requested_numCPU="$requested_numCPU"
     #hlp   requested_memory="$requested_memory"
