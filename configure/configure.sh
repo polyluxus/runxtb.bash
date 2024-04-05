@@ -470,7 +470,7 @@ ask_callname ()
 
 ask_modules ()
 {
-  ask "If a modular cluster management is available, do you want to use it?"
+  ask "If a modular path management is available, do you want to use it?"
   use_module_system=$(read_true_false)
   debug "use_module_system=$use_module_system"
   if [[ "$use_module_system" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
@@ -508,6 +508,12 @@ ask_modules ()
     fi
   else
     debug "No modules used."
+  fi
+  # Avoid empty depending variables
+  if [[ "$use_module_system" =~ ^[Ff]([Aa]([Ll]([Ss][Ee]?)?)?)?$ ]] ; then
+    use_purge_modules="false"
+    debug "use_module_system=$use_module_system"
+    debug "use_purge_modules=$use_purge_modules"
   fi
 }
 
