@@ -559,7 +559,8 @@ ask_qsys_details ()
     '' )
       : ;;
     * )
-      [[ -z $use_queue ]] && warning "Unrecognised queueing system ($test_queue)"
+      warning "Unrecognised queueing system ($test_queue)"
+      message "Retaining recovered choice (or empty): $use_queue"
       ;;
   esac
   debug "use_queue=$use_queue"
@@ -758,7 +759,7 @@ print_settings ()
   echo     "## (pbs-gen, bsub-gen, slurm-gen, or *-rwth [special cases, see source])"
   echo     "#  "
   if [[ -z $use_queue ]] ; then
-    echo   "#  request_qsys=\"bsub-rwth\""
+    echo   "#  request_qsys=\"pbs-gen\""
   else
     echo   "   request_qsys=\"$use_queue\""
   fi
