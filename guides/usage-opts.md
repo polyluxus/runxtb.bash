@@ -74,9 +74,10 @@ Command line: `-Q <ARG>`
 Configuration: `request_qsys=<ARG>`
 
 In order for the `-s` and `-S` switches to work, a queueing system for which the submit script should be prepared must be set.
-Currently supported are `pbs-gen` (the default), `slurm-gen`, `slurm-rwth`, `bsub-gen`, and `bsub-rwth`
-The `*rwth` suffix will test a few more options and will set some constraints according to the recommendations of the RWTH IT centre
-(this is currently v0.4.0 maintained only as backwards compatibility and will be removed from future versions).
+Currently supported are `pbs-gen` (the default), `slurm-gen` and `slurm-rwth`.
+The support for `bsub-gen` and `bsub-rwth` is now discontinued and will be removed in a future version.
+The `*rwth` suffix will test a few more options and will set some constraints according to the recommendations of the RWTH IT centre.
+This is currently (as of v0.4.0) only included as backwards compatibility and will also be removed in future versions.
 
 ### Accounting
 

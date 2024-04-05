@@ -533,6 +533,7 @@ ask_qsys_details ()
 {
   ask "What queueing system would you like to use?"
   message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth, slurm-rwth"
+  message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
   local test_queue
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
@@ -756,6 +757,7 @@ print_settings ()
 
   echo     "## Set default queueing system for which the script should be written"
   echo     "## (pbs-gen, bsub-gen, slurm-gen, or *-rwth [special cases, see source])"
+  echo     "## Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
   echo     "#  "
   if [[ -z $use_queue ]] ; then
     echo   "#  request_qsys=\"pbs-gen\""

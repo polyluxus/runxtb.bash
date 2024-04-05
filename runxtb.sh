@@ -532,6 +532,9 @@ write_submit_script ()
     local queue="$1" queue_short
     local output_file_local="$2" submitscript_filename
     [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
+    if [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
+      message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
+    fi
     queue_short="${queue%-*}"
     submitscript_filename="${output_file_local%.*}.${queue_short}.bash"
     debug "Selected queue: $queue; short: $queue_short"
@@ -812,7 +815,8 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       ;;
     #hlp   -Q <ARG> Select queueing system (Default: pbs-gen)
     #hlp            Format: <queue>-<special>
-    #hlp            Recognised values for <queue>: pbs, bsub, slurm
+    #hlp            Recognised values for <queue>: pbs, slurm, (bsub)
+    #hlp            Please note that LSF (bsub) is now deprecated and will be removed in a future version.
     #hlp            Recognised values for <special>: gen, rwth (no effect for pbs)
     Q)
       request_qsys="$OPTARG"
@@ -988,6 +992,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
       qsub_bin=$(command -v qusb 2>&1) || fatal "Command qsub was not found."
       submit_id="Submitted as $("$qsub_bin" "$submitscript" 2>&1)" || exit_status="$?"
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
+      message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
       bsub_bin=$(command -v busb 2>&1) || fatal "Command bsub was not found."
       submit_id="$("$bsub_bin" < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"

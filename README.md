@@ -102,7 +102,7 @@ The following script options are available:
 | `-o <ARG>`  | Trap the output (without errors) of `xtb` into a file called `<ARG>`. (Default: `auto`)
 | `-s`        | Write a submit script instead of interactive execution (default: PBS). Resulting file needs to be submitted.
 | `-S`        | Write submit script and directly submit it to the queue, requires setting a queueing system with `-Q`.
-| `-Q <ARG>`  | Set a queueing system for which the submit script should be prepared, supported `pbs-gen`, `slurm-gen`, `bsub-gen`.
+| `-Q <ARG>`  | Set a queueing system for which the submit script should be prepared, supported `pbs-gen`, `slurm-gen`, (`bsub-gen`).
 | `-P <ARG>`  | Account to project or account `<ARG>`, only slurm, LSF (bsub).
 | `-M`        | Use pre-installed modules instead of path settings, also needs specified module(s). 
 | `-l <ARG>`  | Specify a module to be used, will also invoke `-M`, may be specified multiple times to create a list, `<ARG>=purge` unloads all modules and `<ARG>=0` clears the list.
@@ -113,6 +113,8 @@ The following script options are available:
 | `-h`        | Prints a small help text and current configuration.
 | `-H`        | Retrieve the man page of xtb of the original xtb distribution.
 | `-X`        | Retrieve the man page of xcontrol of the original xtb distribution.
+
+Please note that support for LSF (bsub) is now deprecated and will be removed in a future update.
 
 ## Included files and directories
 

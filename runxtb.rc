@@ -63,7 +63,8 @@
 
 ## Set default queueing system for which the script should be written.
 ## Format <queue>-<special>
-## Recognised values for <queue>: pbs, bsub, slurm
+## Recognised values for <queue>: pbs, slurm, (bsub)
+## Please note that LSF (bsub) is now deprecated and will be removed in a future version.
 ## Recognised values for <special>: gen, rwth (no effect for pbs) [special cases, see source code]
 #
    request_qsys="slurm-gen"
