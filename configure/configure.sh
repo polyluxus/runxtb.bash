@@ -527,12 +527,11 @@ ask_interactivity ()
     read_boolean && use_interactivity="sub"
     debug "use_interactivity=$use_interactivity"
   fi
-
-  ask "What queueing system would you like to use?"
 }
 
 ask_qsys_details ()
 {
+  ask "What queueing system would you like to use?"
   message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth, slurm-rwth"
   local test_queue
   test_queue=$(read_human_input)
