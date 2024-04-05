@@ -2,7 +2,7 @@
 
 This script provides a wrapper for the
 extended tight-binding semi-empirical program package
-[xtb](https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb/xtb)
+[xtb](https://www.chemie.uni-bonn.de/grimme/de/software/xtb)
 (version 6.0 or later) from Stefan Grimme's group at the University of Bonn
 (contact: xtb{at}thch.uni-bonn.de).
 It is available via [GitHub](https://github.com/grimme-lab/xtb).
