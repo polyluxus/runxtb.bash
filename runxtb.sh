@@ -645,7 +645,7 @@ write_submit_script ()
 			export MODULEPATH="$MODULEPATH"
 			EOF
       if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
-        echo "modules purge 2>&1" >&9
+        echo "module purge 2>&1" >&9
       fi
       local mod
       for mod in "${load_modules[@]}" ; do
