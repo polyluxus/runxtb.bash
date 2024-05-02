@@ -614,7 +614,11 @@ write_submit_script ()
         fi
         echo "#SBATCH --export=NONE" >&9
       fi
-      submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
+      if [[ "${xtb_callname}" == xtb ]]; then
+        submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
+      elif [[ "${xtb_callname}" == crest ]]; then
+        submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" "-T" "${requested_numCPU}" )
+      fi
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
