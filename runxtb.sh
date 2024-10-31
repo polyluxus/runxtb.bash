@@ -614,11 +614,15 @@ write_submit_script ()
         fi
         echo "#SBATCH --export=NONE" >&9
       fi
-      if [[ "${xtb_callname}" == xtb ]]; then
-        submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
-      elif [[ "${xtb_callname}" == crest ]]; then
-        submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" "-T" "${requested_numCPU}" )
-      fi
+      # FIXME: we don't need to assemble this here, we can do that for all of the queues after processing
+      #        remove the srun command -- it's only necessary for multi-node jobs
+      #        we enforce single node (not sure if xtb can handle more)
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
+      # if [[ "${xtb_callname}" == xtb ]]; then
+      #   submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
+      # elif [[ "${xtb_callname}" == crest ]]; then
+      #   submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" "-T" "${requested_numCPU}" )
+      # fi
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
@@ -938,6 +942,12 @@ debug "Guessed jobname is '$jobname'."
 
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
+# FIXME: quickfix to run crest in multithreads
+if [[ "${xtb_callname}" == crest ]]; then
+	message "Detected usage of 'crest', will add quick fix to allow parallelisation with ${requested_numCPU} threads."
+	message "This is not yet well tested."
+	xtb_commands+=( "-T" "${requested_numCPU}" )
+fi
 debug "Commands for ${xtb_callname} are '${xtb_commands[*]}'."
 
 if [[ "$ignore_empty_commandline" =~ [Ff][Aa][Ll][Ss][Ee] ]] ; then
