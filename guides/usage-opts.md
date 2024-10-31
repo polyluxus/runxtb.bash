@@ -140,4 +140,4 @@ Command line: `-X`
 
 Retrieve the man page of xcontrol from the original xtb distribution.
 
-(Martin; 2024-04-04; wrapper version 0.6.0.rc1)
+(Martin; 2024-10-31; wrapper version 0.6.0.rc3)

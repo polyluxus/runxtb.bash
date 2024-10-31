@@ -175,4 +175,4 @@ See [LICENSE](LICENSE) to see the full text.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-(Martin; 2024-04-04; wrapper version 0.6.0.rc1)
+(Martin; 2024-10-31; wrapper version 0.6.0.rc3)
