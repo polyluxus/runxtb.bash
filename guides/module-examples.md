@@ -143,4 +143,4 @@ purge_modules="true"
 ```
 This will unload all modules and allows you to include only the necessary ones.
 
-(Martin; 2024-10-31; wrapper version 0.6.0.rc3)
+(Martin; 2024-11-02; wrapper version 0.6.0)

@@ -153,5 +153,5 @@ If you are not sure, or using it the first time, these are the basic steps for w
 
    Now testing should be complete.
 
-(Martin; 2024-10-31; wrapper version 0.6.0.rc3)
+(Martin; 2024-11-02; wrapper version 0.6.0)
 
