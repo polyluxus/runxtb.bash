@@ -470,7 +470,7 @@ ask_callname ()
 
 ask_modules ()
 {
-  ask "If a modular cluster management is available, do you want to use it?"
+  ask "If a modular path management is available, do you want to use it?"
   use_module_system=$(read_true_false)
   debug "use_module_system=$use_module_system"
   if [[ "$use_module_system" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
@@ -482,6 +482,9 @@ ask_modules ()
       # use_module_system="false"
       # warning "Switching the use of modules off."
     fi
+    ask "Would you like to purge pre-loaded modules?"
+    use_purge_modules=$(read_true_false)
+    debug "use_purge_modules=$use_purge_modules"
     # Unsetting read in module
     unset use_module_items
     local module_index=0
@@ -506,6 +509,12 @@ ask_modules ()
   else
     debug "No modules used."
   fi
+  # Avoid empty depending variables
+  if [[ "$use_module_system" =~ ^[Ff]([Aa]([Ll]([Ss][Ee]?)?)?)?$ ]] ; then
+    use_purge_modules="false"
+    debug "use_module_system=$use_module_system"
+    debug "use_purge_modules=$use_purge_modules"
+  fi
 }
 
 ask_interactivity ()
@@ -518,13 +527,13 @@ ask_interactivity ()
     read_boolean && use_interactivity="sub"
     debug "use_interactivity=$use_interactivity"
   fi
-
-  ask "What queueing system would you like to use?"
 }
 
 ask_qsys_details ()
 {
+  ask "What queueing system would you like to use?"
   message "Currently supported: pbs-gen, bsub-gen, slurm-gen, bsub-rwth, slurm-rwth"
+  message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
   local test_queue
   test_queue=$(read_human_input)
   debug "test_queue=$test_queue"
@@ -550,7 +559,8 @@ ask_qsys_details ()
     '' )
       : ;;
     * )
-      [[ -z $use_queue ]] && warning "Unrecognised queueing system ($test_queue)"
+      warning "Unrecognised queueing system ($test_queue)"
+      message "Retaining recovered choice (or empty): $use_queue"
       ;;
   esac
   debug "use_queue=$use_queue"
@@ -747,9 +757,10 @@ print_settings ()
 
   echo     "## Set default queueing system for which the script should be written"
   echo     "## (pbs-gen, bsub-gen, slurm-gen, or *-rwth [special cases, see source])"
+  echo     "## Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
   echo     "#  "
   if [[ -z $use_queue ]] ; then
-    echo   "#  request_qsys=\"bsub-rwth\""
+    echo   "#  request_qsys=\"pbs-gen\""
   else
     echo   "   request_qsys=\"$use_queue\""
   fi
@@ -773,15 +784,24 @@ print_settings ()
   echo     "#"
   if [[ -z $use_module_system ]] ; then
     echo   "#  use_modules=\"true\""
+    echo   "#"
+    echo   "#  Allow to start fresh by allowing modules to be purged:"
+    echo   "#"
+    echo   "#  purge_modules=\"true\""
+    echo   "#  purge_modules=\"false\""
   else
     echo   "   use_modules=\"$use_module_system\""
+    echo   "#"
+    echo   "#  Allow to start fresh by allowing modules to be purged:"
+    echo   "#"
+    echo   "   purge_modules=\"$use_purge_modules\""
   fi
   echo     "#"
   if (( ${#use_module_items[@]} == 0 )) ; then
     echo   "#  They need to be named, too. For example:"
     echo   "#"
-    echo   "#  load_modules[0]=\"CHEMISTRY\""
-    echo   "#  load_modules[1]=\"xtb\""
+    echo   "#  load_modules[0]=\"xtb\""
+    echo   "#  load_modules[1]=\"CREST\""
   else
     echo   "#  Specified modules to be loaded:"
     echo   "#"

@@ -77,11 +77,24 @@ fatal ()
 
 debug ()
 {
-  # Include the fuction that called the debug statement (hence index 1, as 0 would be the debug function itself)
+  # Include the fuction that called the debug statement (skip the first, that is the debug function itself)
   local line
   while read -r line || [[ -n "$line" ]] ; do
-    echo "DEBUG  : (${FUNCNAME[1]}) $line" >&4
+    echo "DEBUG  : (${FUNCNAME[*]:1}) $line" >&4
   done <<< "$*"
+}
+
+debug_trace ()
+{
+  # This function will read from stdout and pass it to the debug function.
+  # The intended funktionality is within this construct:
+  #   command_that_fails_and_writes_stdout > >(debug_trace) || fatal "fail"
+  # The script error message comes first, but the command output comes next.
+  # It's a helper function for the modules feature.
+  local line
+  while read -r line || [[ -n "$line" ]] ; do
+    debug "$line"
+  done
 }
 
 #
@@ -106,7 +119,7 @@ helpme ()
 display_howto ()
 {
   local show_howto="${1:-xtb}"
-  if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+  if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
     debug "Using modules."
     # Loading the modules should take care of everything except threads
     load_xtb_modules || fatal "Failed loading modules."
@@ -206,11 +219,6 @@ get_bindir ()
 
 cleanup_and_quit ()
 {
-  # Clean temporary files
-  if [[ -e "$tmpfile" && -f "$tmpfile" ]] ; then
-    debug "$(rm -vf "$tmpfile")"
-  fi
-
   # Say a nice 'Bye bye!'
   message "Runxtb ($version, $versiondate) wrapper script completed."
 
@@ -362,25 +370,20 @@ load_xtb_modules ()
   # Fail if there are no modules given (don't make any assumptions).
   (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
   # Fail if the module command is not available. 
-  ( command -v module &>> "$tmpfile" ) || fatal "Command 'module' not available."
-  # Try to load the modules, but trap the output in the temporary file.
-  # Exit if that fails (On RWTH cluster the exit status of modules is always 0).
-  module load "${load_modules[*]}" &>> "$tmpfile" || fatal "Failed to load modules."
-  # Remove colourcodes with sed:
-  # https://www.commandlinefu.com/commands/view/12043/remove-color-special-escape-ansi-codes-from-text-with-sed
-  sed -i 's,\x1B\[[0-9;]*[a-zA-Z],,g' "$tmpfile"
-  # Check whether then modules were loaded ok
-  local check_module
-  for check_module in "${load_modules[@]}" ; do
-    # Cut after a slash is encountered (probably works universally), there is a check for the command anyway
-    if grep -q -E "${check_module%%/*}.*[Oo][Kk]" "$tmpfile" ; then
-      debug "Module '${check_module}' loaded successfully."
-    else
-      debug "Issues loading module '${check_module}'."
-      debug "$(cat "$tmpfile")"
-      return 1
-    fi
+  ( command -v module &> /dev/null ) || fatal "Command 'module' not available."
+  # Since commited to only supporting proper module systems, failing to load
+  # a module will produce an exit status > 0. This will be trapped and the script 
+  # will exit. (On the rwth cluster it is 'Lmod' - good choice.)
+  # To be on the safe side, there should be the option to purge modules.
+  if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
+    module purge &> >(debug_trace) || fatal "Failed to purge modules."
+  fi
+  # Load the modules sequentially:
+  local mod
+  for mod in "${load_modules[@]}" ; do
+    module load "${mod}" &> >(debug_trace) || fatal "Failed to load module '${mod}'."
   done
+  debug "Modules loaded successfully."
 }
 
 #
@@ -529,6 +532,9 @@ write_submit_script ()
     local queue="$1" queue_short
     local output_file_local="$2" submitscript_filename
     [[ -z $queue ]] && fatal "No queueing systen selected. Abort."
+    if [[ "$queue" =~ [Bb][Ss][Uu][Bb] ]] ; then
+      message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
+    fi
     queue_short="${queue%-*}"
     submitscript_filename="${output_file_local%.*}.${queue_short}.bash"
     debug "Selected queue: $queue; short: $queue_short"
@@ -546,7 +552,7 @@ write_submit_script ()
     # Calculate the correct use of memory, add some overhead
     local corrected_memory
     corrected_memory=$(( requested_numCPU * requested_memory + 100 ))
-    
+
     # Header is different for the queueing systems
     if [[ "$queue" =~ [Pp][Bb][Ss] ]] ; then
       cat >&9 <<-EOF
@@ -608,7 +614,15 @@ write_submit_script ()
         fi
         echo "#SBATCH --export=NONE" >&9
       fi
-      submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
+      # FIXME: we don't need to assemble this here, we can do that for all of the queues after processing
+      #        remove the srun command -- it's only necessary for multi-node jobs
+      #        we enforce single node (not sure if xtb can handle more)
+      submit_commandline=( "$xtb_callname" "${xtb_commands[@]}" )
+      # if [[ "${xtb_callname}" == xtb ]]; then
+      #   submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" )
+      # elif [[ "${xtb_callname}" == crest ]]; then
+      #   submit_commandline=( "srun" "$xtb_callname" "${xtb_commands[@]}" "-T" "${requested_numCPU}" )
+      # fi
     else
       fatal "Unrecognised queueing system '$queue'."
     fi
@@ -627,17 +641,24 @@ write_submit_script ()
 		EOF
 
     # Use modules or path
-    if [[ "$use_modules" =~ ^[Tt][Rr]?[Uu]?[Ee]? ]] ; then
+    if [[ "$use_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
       (( ${#load_modules[*]} == 0 )) && fatal "No modules to load."
       cat >&9 <<-EOF
 			# Loading the modules should take care of everything except threads
 			# Export current (at the time of execution) MODULEPATH (to be safe, could be set in bashrc)
 			export MODULEPATH="$MODULEPATH"
-			module load ${load_modules[*]} 2>&1 || exit 1
+			EOF
+      if [[ "$purge_modules" =~ ^[Tt]([Rr]([Uu]([Ee])?)?)?$ ]] ; then
+        echo "module purge 2>&1" >&9
+      fi
+      local mod
+      for mod in "${load_modules[@]}" ; do
+        echo "module load '${mod}' 2>&1" >&9
+      done
+
 			# Redirect because otherwise it would go to the error output, which might be bad
 			# Exit on error, which it might not do given a specific implementation
 			 
-			EOF
     else
       # Use path settings
       # exported in wrapper: XTBHOME XTBPATH PATH MANPATH LD_LIBRARY_PATH PYTHONPATH
@@ -695,13 +716,6 @@ operatingsystem=$(uname -o)
 architecture=$(uname -p)
 processortype=$(grep 'model name' /proc/cpuinfo|uniq|cut -d ':' -f 2)
 
-# Find temporary directory for internal logs (or use null)
-if ! tmpfile="$( mktemp --tmpdir runxtb.err.XXXXXX 2> /dev/null )" ; then
-  warning "Failed creating temporary file for error logging."
-  tmpfile="/dev/null"
-fi
-debug "Writing errors to temporary file '$tmpfile'."
-
 # Clean up in case of emergency
 trap cleanup_and_quit EXIT SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
@@ -718,9 +732,10 @@ request_qsys="pbs-gen"
 qsys_project="default"
 exit_status=0
 use_modules="false"
+purge_modules="true"
 declare -a load_modules
-#load_modules[0]="CHEMISTRY"
-#load_modules[1]="xtb"
+#load_modules[0]="xtb"
+#load_modules[1]="crest"
 stay_quiet=0
 ignore_empty_commandline=false
 
@@ -808,7 +823,8 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
       ;;
     #hlp   -Q <ARG> Select queueing system (Default: pbs-gen)
     #hlp            Format: <queue>-<special>
-    #hlp            Recognised values for <queue>: pbs, bsub, slurm
+    #hlp            Recognised values for <queue>: pbs, slurm, (bsub)
+    #hlp            Please note that LSF (bsub) is now deprecated and will be removed in a future version.
     #hlp            Recognised values for <special>: gen, rwth (no effect for pbs)
     Q)
       request_qsys="$OPTARG"
@@ -827,10 +843,16 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp            May be specified multiple times to create a list.
     #hlp            The modules need to be specified in the order they have to be loaded.
     #hlp            If <ARG> is '0', then reset the list.
+    #hlp            If <ARG> is 'purge', all (by default) loaded modules will be unloaded,
+    #hlp            then the list will be reset.
+    #hlp            Please note that an empty list will cause the script to fail.
     #hlp            (Can also be set in the rc.)
     l)
       use_modules="true"
-      if [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
+      if [[ "$OPTARG" =~ ^[[:space:]]*[Pp][Uu][Rr][Gg][Ee][[:space:]]*$ ]] ; then
+	purge_modules="true"
+	unset load_modules
+      elif [[ "$OPTARG" =~ ^[[:space:]]*([0]+)[[:space:]]?(.*)$ ]] ; then
         unset load_modules
         [[ -n "${BASH_REMATCH[2]}" ]] && load_modules+=( "${BASH_REMATCH[2]}" )
       else
@@ -887,6 +909,7 @@ while getopts :p:m:w:o:sSQ:P:Ml:iB:C:qhHX options ; do
     #hlp   xtb_install_root="$xtb_install_root" (will set XTBPATH)
     #hlp   xtb_callname="$xtb_callname"
     #hlp   use_modules="$use_modules" 
+    #hlp   purge_modules="$purge_modules"
     #hlp   load_modules=("${load_modules[*]}")
     #hlp   requested_numCPU="$requested_numCPU"
     #hlp   requested_memory="$requested_memory"
@@ -919,6 +942,12 @@ debug "Guessed jobname is '$jobname'."
 
 # Store everything that should be passed to xtb
 xtb_commands=("$@")
+# FIXME: quickfix to run crest in multithreads
+if [[ "${xtb_callname}" == crest ]]; then
+	message "Detected usage of 'crest', will add quick fix to allow parallelisation with ${requested_numCPU} threads."
+	message "This is not yet well tested."
+	xtb_commands+=( "-T" "${requested_numCPU}" )
+fi
 debug "Commands for ${xtb_callname} are '${xtb_commands[*]}'."
 
 if [[ "$ignore_empty_commandline" =~ [Ff][Aa][Ll][Ss][Ee] ]] ; then
@@ -977,6 +1006,7 @@ if [[ $run_interactive =~ ([Nn][Oo]|[Ss][Uu][Bb]) ]] ; then
       qsub_bin=$(command -v qusb 2>&1) || fatal "Command qsub was not found."
       submit_id="Submitted as $("$qsub_bin" "$submitscript" 2>&1)" || exit_status="$?"
     elif [[ $request_qsys =~ [Bb][Ss][Uu][Bb] ]] ; then
+      message "Please note that support for LSF (bsub) is now deprecated and will be removed in a future update."
       bsub_bin=$(command -v busb 2>&1) || fatal "Command bsub was not found."
       submit_id="$("$bsub_bin" < "$submitscript" 2>&1 )" || exit_status="$?"
       submit_id="${submit_id#Info: }"

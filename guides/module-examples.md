@@ -1,167 +1,146 @@
-# Example for module files
+# Using modules to control the environment
 
-The module system makes setting up different versions of software much easier to maintain.
-Module files can be very simple, or very complex.
-All they have to do though is to set the appropriate paths and variables for the execution.
-I have used modified versions from CLAIX18 (the RWTH Aachen cluster),
-which I have cleaned for this repository.
+## Introduction
+
+Running programs usually requires certain environment variables to be set to specific values.
+The script provided in this repository is one way to set up the environment for xtb.
+Another way is to use modules to set up these parameters, control dependencies, and possible clashes.
+
+With environment modules it is also possible to set up different versions of an executable alongside each other.
+Especially in scientific works it is important to be consistent with what versions you use throughout a project.
+When multiple users work on multiple projects for long periods of time, the need arises to manage different versions.
+Environment modules are a good way to maintain these versions.
+
+However, it should be pointed out, that with modules a wrapper script like runxtb is superfluous.
+Fortunately, the script provided within this repository has a few more features to offer.
+For these convenience features, the script comes with an interface to access environment modules.
+
+Unfortunately, not all environment module systems provide the capability necessary to operate within this script.
+Before runxtb v0.7.0 there were workarounds for module systems, that always used the exit code 0.
+Support for these system has been discontinued.
+
+For the developement of this feature, [Lmod](https://lmod.readthedocs.io/) was used.
+This choice was made as CLAIX18 (the RWTH Aachen University HPC Cluster) transitioned to this system.
+For more information, visit the documentation available
+[here](https://help.itc.rwth-aachen.de/service/rhr4fjjutttf/article/450d33cc19fd4e50b1dd07027e9b55bd/#user-content-toolchains).
 
 *Disclaimer:*
-I am no longer affiliated with RWTH Aachen, and I am not using the module system in my current setup.
-Therefore the example files provided below are not tested in a working environment.
-I have tried to incorporate some of the changes in the setup given in the xtb manual,
-see [read the docs](https://xtb-docs.readthedocs.io/en/latest/contents.html).
-Please also see my guide on [how to set up xtb for runxtb](set-up.md).
-You may use the files provided below as a starting point for your own templates and
-review them carefully before use.  
-Please note that this guide was outdated already in 2020 as you can roughly calculate that back from
-the used versions.  
-Support for modules will change in upcoming versions.
+I am no longer affiliated with RWTH Aachen, and I am not testing the feature in a productive manner.
+I will try to support the feature in the way it is outlined in this guide.
+If you find anything not going as expected,
+please include detailed descriptions when submitting a bug report to the
+[GitHub issue tracker](https://github.com/polyluxus/runxtb.bash/issues).
 
-(Martin; 2024-01-07; wrapper version 0.5.0)
+You'll find additional notes for the use of modules on CLAIX18 at the end of this document.
 
-## Root module
+You can test what is expected of the `module` command with the provided script in the configure directory of this repository.
 
-The root module is the one doing all the work, defining the module and setting the environment.
+## Installation of Lmod on Ubuntu 22.04
 
-The variable `PROJECTHOME` needs to be adjusted to the home of where the software is.
-If it is your own home directory, you can also use `$::env(HOME)` as an argument.
+As this is not a comprehensive guide, please see the documentation of Lmod to set it up properly.
 
-The installation variable `XTBHOME` also has to be adjusted accordingly.
-It currently assumes that the software is stored 
-in a directory `${PROJECTHOME}/local/$modulename/$modulename-$version`,
-which could resolve to `/home/polyluxus/local/xtb/xtb-6.2.3` for the
-most recent version of xtb.
-The variable `version` will be set from the version module, see below.
-
-
+On my laptop it was as easy as installing Lmod as a package. 
+As a user with root priveleges, you can simply install it with the `apt` packet manager:
 ```
-#%Module1.0###-*-tcl-*-#########################################################
-##
-## xtb modulefile
-## https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/xtb
-###
-
-# Naming the module
-set modulename "xtb"
-
-# Home directory of the installation
-set PROJECTHOME "/home/polyluxus"
-
-# Define local variable with path to installation software
-# version will be set by referring module file
-set XTBHOME "${PROJECTHOME}/local/$modulename/$modulename-$version"
-
-# This is the help output, printed by "module help"
-proc ModulesHelp { } {
-  # define the global variables version and modulename in this function
-  global version
-  global modulename
-  puts stderr "*** This module initialises the $modulename $version environment ***"
-  puts stderr "    An extended tight-binding semi-empirical program package        " 
-  puts stderr "    Please contact xtb@thch.uni-bonn.de for details.                "
-  puts stderr "    See also: https://github.com/grimme-lab/xtb                     "
-}
-
-# Short description (preferably 1 line) what the loaded software does,
-# or what the module is good for. 
-# Printed by "module whatis":
-module-whatis "$modulename - extended tight-binding semi-empirical program package"
-
-# If module should be loaded, check for conflicts and print info
-switch [module-info mode] {
-  load {     
-    # Is this module already loaded?
-    set conflict "$modulename/$version"
-    if { [is-loaded $conflict]} {
-      puts stderr "$conflict already loaded, doing nothing."
-      return
-    }
-    # Is a different version already loaded? (This would check xtb6)
-    set conflict $modulename 
-    if { [is-loaded $conflict]} {
-      puts stderr "$conflict already loaded; conflicts with $modulename/$version."
-      puts stderr "Try unloading $conflict first."
-      exit
-    }
-    # Check if the software is really installed, if not error and abort.
-    if { ![file isdirectory $XTBHOME] } {
-      puts stderr "$modulename is not installed on this machine."
-      exit
-    }
-    # Nothing failed, print a success message:
-    puts stderr "Loading $modulename $version"
-  }
-  unload {
-    puts stderr "Unloading $modulename $version"
-  }
-}
-
-# XTBHOME is the root directory of the loaded xtb version
-setenv        XTBHOME  $XTBHOME
-
-# Recommendations for loading:
-prepend-path  XTBPATH  $::env(HOME)
-prepend-path  XTBPATH  $XTBHOME
-prepend-path  XTBPATH  ${XTBHOME}/share/xtb
-
-# The following paths need to be set/adjusted for the 6.0 distributions
-prepend-path  PATH     $XTBHOME/bin
-# Old MANPATH (~ 6.0)
-if { [file isdirectory $XTBHOME/man] } {
-  prepend-path  MANPATH  $XTBHOME/man
-}
-# New MANPATH (~ 6.2.x)
-if { [file isdirectory $XTBHOME/share/man] } {
-  prepend-path  MANPATH  $XTBHOME/share/man
-}
-# Include libraries
-if { [file isdirectory $XTBHOME/lib] } {
-  prepend-path  LD_LIBRARY_PATH     $XTBHOME/lib
-}
-# Include the scripts directory, if it exists (very old, or very custom)
-if { [file isdirectory $XTBHOME/scripts] } {
-  prepend-path  PATH     $XTBHOME/scripts
-}
-# Include the python directory, if it exists
-if { [file isdirectory $XTBHOME/python] } {
-  prepend-path  PATH        $XTBHOME/python
-  prepend-path  PYTHONPATH  $XTBHOME/python
-}
+apt install lmod
 ```
 
-## Version module
+Now you need to make sure that files from the `/etc/profile.d/` directory are sourced.
+In many cases the default `/etc/profile` will take care of this. 
+Sometimes you might want to adapt the `/etc/bash.bashrc` file, too.
 
-The version module is only necessary to set the `version` variable, so that
-the root module will find the correct software path.
+If this step is completed, you may test the installation with the script provided with this repository.
 
-The variable `module_base_path` needs to be adjusted to point to 
-the directory of the root module, the filename in the last line
-also needs to be adjusted to point to the root module, which is defined above.
+## Setting up the modules
 
+This guide assumes pretty much everything written in the [set-up guide](./set-up.md).
+
+It should come as no surprise that running Lmod requires a properly set up environment, too.
+If you'll set software up system-wide, you may want to place your module files in the default location:
+`/usr/share/lmod/lmod/modulefiles`.
+
+In other cases, where you are running software in user spaces, you may want to extend the module search path in your `~/.bashrc` 
+with the following line:
 ```
-#%Module1.0###-*-tcl-*-#########################################################
-##
-## XTB modulefile
-##
+export MODULEPATH="/home/martin/local/modulefiles/:$MODULEPATH"
+```
+Please adjust according to your system.
 
-# For the local install (modify this to the correct path)
-set module_base_path "/home/polyluxus/modules/source"
+### The xtb module
 
-# Needs to be adjusted for what is to be loaded
-set MAJORVERSION "6"
-set MINORVERSION "2"
-set REVISION     "3"
+Create the file `/home/martin/local/modulefiles/xtb/6.6.1.lua` with this content:
+```
+help([[
+Description:
+  xtb - An extended tight-binding semi-empirical program package. 
+Homepage:
+https://xtb-docs.readthedocs.io
+]])
 
-# Will be read by the source module file
-set version "$MAJORVERSION.$MINORVERSION.$REVISION"
+whatis("Description:  xtb - An extended tight-binding semi-empirical program package. ")
+whatis("Homepage: https://xtb-docs.readthedocs.io")
+whatis("URL: https://xtb-docs.readthedocs.io")
+conflict("xtb")
 
-# Load the source module file (needs to be adjusted to the name used for the root module above)
-source "$module_base_path/xtb/xtb"
+prepend_path("LD_LIBRARY_PATH","/home/martin/local/xtb/xtb-6.6.1")
+prepend_path("LIBRARY_PATH","/home/martin/local/xtb/xtb-6.6.1/lib")
+prepend_path("PATH","/home/martin/local/xtb/xtb-6.6.1/bin")
+prepend_path("PKG_CONFIG_PATH","/home/martin/local/xtb/xtb-6.6.1/lib/pkgconfig")
+prepend_path("XDG_DATA_DIRS","/home/martin/local/xtb/xtb-6.6.1/share")
+setenv("XTBHOME","/home/martin/local/xtb/xtb-6.6.1")
+setenv("XTBPATH","/home/martin/local/xtb/xtb-6.6.1")
 ```
 
-If no version control is wanted, one module with hard-coded paths should also do the trick.
+### The crest module
+Create the file `/home/martin/local/modulefiles/crest/2.12.lua` with this content:
+```
+help([[
+Description:
+  CREST - conformer rotamer ensemble sampling tool
+Homepage:
+  https://crest-lab.github.io/crest-docs/
+]])
 
-The version module should be placed in a directory which is found in the module path environment variable, 
-it could be, using the example above: `/home/polyluxus/modules/load/xtb/xtb_v6.2.3`.
+whatis("Description:  CREST - conformer rotamer ensemble sampling tool")
+whatis("Homepage: https://crest-lab.github.io/crest-docs/")
+whatis("URL: https://crest-lab.github.io/crest-docs/")
+conflict("crest")
 
+load("xtb")
+```
+For this to work, crest needs to be placed alongside xtb.
+If you have followed the other guide, this will be the case.
+In other cases, you might need to adjust these files.
+
+## Using modules
+
+It is now as simple as running 
+```
+module load crest
+```
+to load the correct installation environment.
+
+In the configuration file it is only necessary to include the module:
+```
+use_modules="true"
+load_modules[0]="crest"
+```
+
+# Additional notes CLAIX18
+
+As of late 2023 the following modules need to be included in the configuration file, e.g. `~/.runxtbrc`:
+```
+load_modules[0]="foss/2022a"
+load_modules[1]="xtb/6.5.1"
+load_modules[2]="CREST/2.12"
+```
+Unfortuantely, those modules have dependencies which have a conflict with the `intel` toolchain,
+which is loaded by default. 
+This is specifically the dependency on the `OpenMPI` module which is part of the `foss/2022a` toolchain.
+You should therefore also use the option to purge all modules:
+```
+purge_modules="true"
+```
+This will unload all modules and allows you to include only the necessary ones.
+
+(Martin; 2024-11-02; wrapper version 0.6.0)

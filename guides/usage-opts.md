@@ -74,9 +74,10 @@ Command line: `-Q <ARG>`
 Configuration: `request_qsys=<ARG>`
 
 In order for the `-s` and `-S` switches to work, a queueing system for which the submit script should be prepared must be set.
-Currently supported are `pbs-gen` (the default), `slurm-gen`, `slurm-rwth`, `bsub-gen`, and `bsub-rwth`
-The `*rwth` suffix will test a few more options and will set some constraints according to the recommendations of the RWTH IT centre
-(this is currently v0.4.0 maintained only as backwards compatibility and will be removed from future versions).
+Currently supported are `pbs-gen` (the default), `slurm-gen` and `slurm-rwth`.
+The support for `bsub-gen` and `bsub-rwth` is now discontinued and will be removed in a future version.
+The `*rwth` suffix will test a few more options and will set some constraints according to the recommendations of the RWTH IT centre.
+This is currently (as of v0.4.0) only included as backwards compatibility and will also be removed in future versions.
 
 ### Accounting
 
@@ -98,10 +99,12 @@ This option also needs a specified module or a list of modules (see below).
 
 Command line: `-l <ARG>` 
 Configuration: `load_modules[<N>]=<ARG>`, with `<N>` being the integer load order
+Configuration: `purge_modules=true|false`
 
 Specify a module to be used. This will also invoke `-M`.
 The option may be specified multiple times to create a list (stored as an array).
 If `<ARG>` is `0`, the list will be cleared first.
+If `<ARG>` is `purge`, all modules will be purged (unloaded) first, then the list will be cleared.
 The modules (if more than one) need to be specified in the order they have to be loaded if they depend on each other.
 
 Command line: `-B <ARG>`  
@@ -137,4 +140,4 @@ Command line: `-X`
 
 Retrieve the man page of xcontrol from the original xtb distribution.
 
-(Martin; 2024-01-07; wrapper version 0.5.0)
+(Martin; 2024-11-02; wrapper version 0.6.0)
